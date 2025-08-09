@@ -1,51 +1,83 @@
-version: '3.9'
 services:
   api:
     build: ./backend
     ports:
-      - "3000:3000"
+      - '3000:3000'
     env_file: .env
     volumes:
-      - ./backend:/app
       - /app/node_modules
     depends_on:
       - db
       - redis
+    develop:
+      watch:
+        - action: sync
+          path: ./backend/src
+          target: /app/src
+        - action: sync
+          path: ./backend/tsconfig.json
+          target: /app/tsconfig.json
+        - action: rebuild
+          path: ./backend/package*.json
   web:
     build: ./frontend
     ports:
-      - "5173:5173"
+      - '5173:5173'
     env_file: .env
     volumes:
-      - ./frontend:/app
       - /app/node_modules
     depends_on:
       - api
+    develop:
+      watch:
+        - action: sync
+          path: ./frontend/src
+          target: /app/src
+        - action: sync
+          path: ./frontend/index.html
+          target: /app/index.html
+        - action: sync
+          path: ./frontend/vite.config.ts
+          target: /app/vite.config.ts
+        - action: sync
+          path: ./frontend/tsconfig.json
+          target: /app/tsconfig.json
+        - action: rebuild
+          path: ./frontend/package*.json
   worker:
     build: ./worker
     env_file: .env
     volumes:
-      - ./worker:/app
       - /app/node_modules
     depends_on:
       - db
       - redis
+    develop:
+      watch:
+        - action: sync
+          path: ./worker/src
+          target: /app/src
+        - action: sync
+          path: ./worker/tsconfig.json
+          target: /app/tsconfig.json
+        - action: rebuild
+          path: ./worker/package*.json
   db:
-    image: postgres:15
+    image: postgres:12-alpine
     restart: always
     ports:
-      - "5432:5432"
+      - '5432:5432'
     env_file: .env
     volumes:
       - pgdata:/var/lib/postgresql/data
   redis:
-    image: redis:7
+    image: redis:8-alpine
     ports:
-      - "6379:6379"
+      - '6379:6379'
   nginx:
     image: nginx:1.25-alpine
     ports:
-      - "8080:80"
+      - '8080:80'
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
