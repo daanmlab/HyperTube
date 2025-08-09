@@ -1,4 +1,4 @@
-.PHONY: up down logs api web db redis watch rebuild-api rebuild-web rebuild-worker fresh-rebuild
+.PHONY: up down logs api web db redis watch rebuild-api rebuild-web rebuild-worker fresh-rebuild generate-client generate-client-compose
 
 up:
 	@docker compose up --build
@@ -41,3 +41,11 @@ db:
 
 redis:
 	@docker compose exec redis redis-cli
+
+generate-client:
+	@echo "🔧 Generating API client..."
+	@cd backend && chmod +x scripts/generate-client.sh && npm run generate:client
+
+generate-client-compose:
+	@echo "🔧 Generating API client using Docker Compose..."
+	@cd backend && chmod +x scripts/generate-client-compose.sh && npm run generate:client:compose
