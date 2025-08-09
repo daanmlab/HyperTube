@@ -8,16 +8,25 @@
     "generate:client": "cd ../backend && npm run generate:client"
   },
   "dependencies": {
+    "@radix-ui/react-slot": "^1.2.3",
+    "@tailwindcss/vite": "^4.1.11",
     "axios": "^1.7.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.539.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "tailwind-merge": "^3.3.1",
+    "tailwindcss": "^4.1.11"
   },
   "devDependencies": {
+    "@types/node": "^24.2.1",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
-    "@vitejs/plugin-react": "^4.0.0",
+    "@vitejs/plugin-react": "^5.0.0",
     "openapi-typescript": "^7.8.0",
+    "tw-animate-css": "^1.3.6",
     "typescript": "^5.0.4",
-    "vite": "^4.3.0"
+    "vite": "^6.0.0"
   }
 }

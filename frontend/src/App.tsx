@@ -1,5 +1,7 @@
+import { Button } from '@/components/ui/button';
 import { useEffect } from 'react';
 import { ApiService } from './api';
+import './index.css';
 
 export default function App() {
   useEffect(() => {
@@ -10,5 +12,8 @@ export default function App() {
     fetchData();
     console.log('App component mounted');
   }, []);
-  return <h1>Vite + React</h1>;
+  return <>
+    <Button>test</Button>
+  <h1>Vite + React</h1>
+  </>;
 }
