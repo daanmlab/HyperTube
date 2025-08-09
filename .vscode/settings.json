@@ -1,0 +1,12 @@
+{
+  "workbench.colorTheme": "GitHub Dark",
+  "workbench.iconTheme": "material-icon-theme",
+  "workbench.startupEditor": "readme",
+  "workbench.editor.enablePreview": false,
+  "workbench.editor.restoreViewState": true,
+  "workbench.panel.defaultLocation": "bottom",
+  "workbench.sideBar.location": "left",
+  "workbench.statusBar.visible": true,
+  "window.title": "${rootName} - ${activeEditorShort}${separator}${appName}",
+  "window.menuBarVisibility": "toggle"
+}

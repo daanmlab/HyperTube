@@ -1,0 +1,12 @@
+node_modules
+dist
+build
+.next
+coverage
+.nyc_output
+*.log
+.env
+.env.local
+.env.*.local
+.DS_Store
+Thumbs.db

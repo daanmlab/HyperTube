@@ -1,0 +1,384 @@
+{
+  "folders": [
+    {
+      "name": "🎬 HyperTube (Root)",
+      "path": "."
+    },
+    {
+      "name": "🔧 Backend (NestJS)",
+      "path": "./backend"
+    },
+    {
+      "name": "⚛️ Frontend (React)",
+      "path": "./frontend"
+    },
+    {
+      "name": "🔄 Worker",
+      "path": "./worker"
+    },
+    {
+      "name": "🌐 Nginx",
+      "path": "./nginx"
+    }
+  ],
+  "settings": {
+    // General Editor Settings
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true,
+    "editor.detectIndentation": false,
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit",
+      "source.organizeImports": "explicit"
+    },
+    "editor.rulers": [80, 120],
+    "editor.bracketPairColorization.enabled": true,
+    "editor.guides.bracketPairs": true,
+    "editor.minimap.enabled": true,
+    "editor.minimap.maxColumn": 120,
+    
+    // File Explorer
+    "explorer.compactFolders": false,
+    "explorer.fileNesting.enabled": true,
+    "explorer.fileNesting.patterns": {
+      "*.ts": "${capture}.js",
+      "*.js": "${capture}.js.map, ${capture}.min.js, ${capture}.d.ts",
+      "*.jsx": "${capture}.js",
+      "*.tsx": "${capture}.ts",
+      "tsconfig.json": "tsconfig.*.json",
+      "package.json": "package-lock.json, yarn.lock, pnpm-lock.yaml",
+      "docker-compose.yml": "docker-compose.*.yml, Dockerfile*",
+      "*.env": ".env.*"
+    },
+    
+    // TypeScript
+    "typescript.preferences.importModuleSpecifier": "relative",
+    "typescript.updateImportsOnFileMove.enabled": "always",
+    "typescript.suggest.autoImports": true,
+    "typescript.preferences.quoteStyle": "single",
+    
+    // ESLint
+    "eslint.workingDirectories": ["backend", "frontend", "worker"],
+    "eslint.validate": ["javascript", "javascriptreact", "typescript", "typescriptreact"],
+    
+    // Prettier
+    "prettier.requireConfig": true,
+    "prettier.singleQuote": true,
+    "prettier.trailingComma": "es5",
+    "prettier.semi": true,
+    "prettier.printWidth": 80,
+    
+    // Files
+    "files.exclude": {
+      "**/node_modules": true,
+      "**/dist": true,
+      "**/build": true,
+      "**/.next": true,
+      "**/coverage": true,
+      "**/.nyc_output": true,
+      "**/.git": false
+    },
+    "files.watcherExclude": {
+      "**/node_modules/**": true,
+      "**/dist/**": true,
+      "**/build/**": true
+    },
+    
+    // Search
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/dist": true,
+      "**/build": true,
+      "**/*.log": true
+    },
+    
+    // Terminal
+    "terminal.integrated.cwd": "${workspaceFolder}",
+    "terminal.integrated.defaultProfile.osx": "zsh",
+    
+    // Git
+    "git.enableSmartCommit": true,
+    "git.confirmSync": false,
+    "git.autofetch": true,
+    
+    // Docker
+    "docker.languageserver.formatter.ignoreMultilineInstructions": true,
+    
+    // Emmet
+    "emmet.includeLanguages": {
+      "typescript": "typescriptreact",
+      "javascript": "javascriptreact"
+    },
+    
+    // File Associations
+    "files.associations": {
+      "*.env.*": "properties",
+      "docker-compose*.yml": "dockercompose",
+      "Dockerfile*": "dockerfile"
+    },
+    
+    // JSON
+    "json.schemas": [
+      {
+        "fileMatch": ["package.json"],
+        "url": "https://json.schemastore.org/package.json"
+      },
+      {
+        "fileMatch": ["tsconfig*.json"],
+        "url": "https://json.schemastore.org/tsconfig.json"
+      }
+    ]
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "🔧 Debug Backend (NestJS)",
+        "type": "node",
+        "request": "launch",
+        "program": "${workspaceFolder}/backend/src/main.ts",
+        "cwd": "${workspaceFolder}/backend",
+        "runtimeArgs": ["-r", "ts-node/register"],
+        "env": {
+          "NODE_ENV": "development"
+        },
+        "console": "integratedTerminal",
+        "restart": true,
+        "envFile": "${workspaceFolder}/.env"
+      },
+      {
+        "name": "🔄 Debug Worker",
+        "type": "node",
+        "request": "launch",
+        "program": "${workspaceFolder}/worker/src/main.ts",
+        "cwd": "${workspaceFolder}/worker",
+        "runtimeArgs": ["-r", "ts-node/register"],
+        "env": {
+          "NODE_ENV": "development"
+        },
+        "console": "integratedTerminal",
+        "restart": true,
+        "envFile": "${workspaceFolder}/.env"
+      },
+      {
+        "name": "🐳 Attach to Backend Container",
+        "type": "node",
+        "request": "attach",
+        "port": 9229,
+        "address": "localhost",
+        "localRoot": "${workspaceFolder}/backend",
+        "remoteRoot": "/app"
+      }
+    ],
+    "compounds": [
+      {
+        "name": "🚀 Debug Full Stack",
+        "configurations": ["🔧 Debug Backend (NestJS)", "🔄 Debug Worker"],
+        "stopAll": true
+      }
+    ]
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "🐳 Docker: Start All Services",
+        "type": "shell",
+        "command": "docker-compose up -d",
+        "group": "build",
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "🐳 Docker: Stop All Services",
+        "type": "shell",
+        "command": "docker-compose down",
+        "group": "build",
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "🐳 Docker: Rebuild All",
+        "type": "shell",
+        "command": "docker-compose down && docker-compose build --no-cache && docker-compose up -d",
+        "group": "build",
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "🔧 Backend: Install Dependencies",
+        "type": "shell",
+        "command": "npm install",
+        "options": {
+          "cwd": "${workspaceFolder}/backend"
+        },
+        "group": "build",
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "⚛️ Frontend: Install Dependencies",
+        "type": "shell",
+        "command": "npm install",
+        "options": {
+          "cwd": "${workspaceFolder}/frontend"
+        },
+        "group": "build",
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "🔄 Worker: Install Dependencies",
+        "type": "shell",
+        "command": "npm install",
+        "options": {
+          "cwd": "${workspaceFolder}/worker"
+        },
+        "group": "build",
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "📦 Install All Dependencies",
+        "dependsOrder": "parallel",
+        "dependsOn": [
+          "🔧 Backend: Install Dependencies",
+          "⚛️ Frontend: Install Dependencies", 
+          "🔄 Worker: Install Dependencies"
+        ],
+        "group": "build"
+      },
+      {
+        "label": "🔧 Backend: Start Dev",
+        "type": "shell",
+        "command": "npm run start:dev",
+        "options": {
+          "cwd": "${workspaceFolder}/backend"
+        },
+        "group": "build",
+        "isBackground": true,
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "shared"
+        },
+        "problemMatcher": {
+          "pattern": {
+            "regexp": ".",
+            "file": 1,
+            "location": 2,
+            "message": 3
+          },
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": ".",
+            "endsPattern": "."
+          }
+        }
+      },
+      {
+        "label": "⚛️ Frontend: Start Dev",
+        "type": "shell",
+        "command": "npm run dev",
+        "options": {
+          "cwd": "${workspaceFolder}/frontend"
+        },
+        "group": "build",
+        "isBackground": true,
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "shared"
+        },
+        "problemMatcher": {
+          "pattern": {
+            "regexp": ".",
+            "file": 1,
+            "location": 2,
+            "message": 3
+          },
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": ".",
+            "endsPattern": "."
+          }
+        }
+      }
+    ]
+  },
+  "extensions": {
+    "recommendations": [
+      // TypeScript & JavaScript
+      "ms-vscode.vscode-typescript-next",
+      "bradlc.vscode-tailwindcss",
+      "esbenp.prettier-vscode",
+      "dbaeumer.vscode-eslint",
+      
+      // React & Frontend
+      "ms-vscode.vscode-react-refactor",
+      "formulahendry.auto-rename-tag",
+      "christian-kohler.path-intellisense",
+      "ms-vscode.vscode-json",
+      
+      // Docker & DevOps
+      "ms-azuretools.vscode-docker",
+      "ms-vscode-remote.remote-containers",
+      
+      // Database
+      "ms-mssql.mssql",
+      "ckolkman.vscode-postgres",
+      
+      // Git & Version Control
+      "eamodio.gitlens",
+      "github.vscode-pull-request-github",
+      
+      // Utilities
+      "ms-vscode.vscode-thunder-client",
+      "ms-vscode.vscode-todo-highlight",
+      "streetsidesoftware.code-spell-checker",
+      "usernamehw.errorlens",
+      "gruntfuggly.todo-tree",
+      
+      // Themes & UI
+      "pkief.material-icon-theme",
+      "github.github-vscode-theme",
+      
+      // Testing
+      "ms-vscode.test-adapter-converter",
+      "hbenl.vscode-test-explorer"
+    ]
+  }
+}
