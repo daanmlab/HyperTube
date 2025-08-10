@@ -5,6 +5,8 @@ import {
   HttpCode,
   HttpStatus,
   Post,
+  Req,
+  Res,
   UseGuards,
   UsePipes,
   ValidationPipe
@@ -16,10 +18,12 @@ import {
   ApiResponse,
   ApiTags
 } from '@nestjs/swagger';
+import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
 import { AuthResponseDto, LoginDto, RegisterDto } from './dto/auth.dto';
+import { FortyTwoAuthGuard } from './guards/forty-two-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @ApiTags('Authentication')
@@ -97,5 +101,37 @@ export class AuthController {
   })
   async getCurrentUser(@CurrentUser('id') userId: string) {
     return this.authService.getProfile(userId);
+  }
+
+  // 42 OAuth routes
+  @Public()
+  @Get('42')
+  @UseGuards(FortyTwoAuthGuard)
+  @ApiOperation({ summary: 'Initiate 42 OAuth login' })
+  @ApiResponse({ 
+    status: 302, 
+    description: 'Redirects to 42 OAuth authorization page' 
+  })
+  async fortyTwoAuth() {
+    // This route initiates the OAuth flow
+  }
+
+  @Public()
+  @Get('42/callback')
+  @UseGuards(FortyTwoAuthGuard)
+  @ApiOperation({ summary: '42 OAuth callback' })
+  @ApiResponse({ 
+    status: 302, 
+    description: 'OAuth callback, redirects to frontend with token' 
+  })
+  async fortyTwoCallback(@Req() req: Request, @Res() res: Response) {
+    const user = req.user;
+    const authResponse = await this.authService.loginWithFortyTwo(user);
+    
+    // Redirect to frontend with the token
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const redirectUrl = `${frontendUrl}/auth/callback?token=${authResponse.access_token}`;
+    
+    return res.redirect(redirectUrl);
   }
 }

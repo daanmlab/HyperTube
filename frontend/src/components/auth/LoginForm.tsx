@@ -113,6 +113,31 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
             {isLoading ? 'Signing in...' : 'Sign In'}
           </Button>
 
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                Or continue with
+              </span>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={() => {
+              window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/auth/42`;
+            }}
+          >
+            <svg className="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm-1 3v6h2V5h-2zm0 8v2h2v-2h-2z"/>
+            </svg>
+            Continue with 42
+          </Button>
+
           <div className="text-center text-sm">
             <span className="text-muted-foreground">Don't have an account? </span>
             <Button

@@ -3,6 +3,17 @@ import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { AuthResponseDto, LoginDto, RegisterDto } from './dto/auth.dto';
 
+export interface FortyTwoUserData {
+  fortyTwoId: string;
+  email: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  avatarUrl?: string;
+  fortyTwoLogin: string;
+  oauthData: any;
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -73,6 +84,45 @@ export class AuthService {
       }
       throw new Error('Registration failed');
     }
+  }
+
+  async findOrCreateFortyTwoUser(userData: FortyTwoUserData): Promise<any> {
+    // First try to find user by 42 ID
+    let user = await this.usersService.findByFortyTwoId(userData.fortyTwoId);
+    
+    if (!user) {
+      // Try to find by email
+      user = await this.usersService.findByEmail(userData.email);
+      
+      if (user) {
+        // Link existing account with 42
+        user = await this.usersService.linkFortyTwoAccount(user.id, userData);
+      } else {
+        // Create new user
+        user = await this.usersService.createFromFortyTwo(userData);
+      }
+    } else {
+      // Update existing 42 user data
+      user = await this.usersService.updateFortyTwoData(user.id, userData);
+    }
+
+    // Update last login
+    await this.usersService.updateLastLogin(user.id);
+
+    return this.usersService.toSafeUser(user);
+  }
+
+  async loginWithFortyTwo(user: any): Promise<AuthResponseDto> {
+    const payload = { 
+      email: user.email, 
+      sub: user.id, 
+      username: user.username 
+    };
+
+    return {
+      access_token: this.jwtService.sign(payload),
+      user,
+    };
   }
 
   async getProfile(userId: string) {

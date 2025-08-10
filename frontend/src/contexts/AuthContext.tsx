@@ -10,12 +10,17 @@ interface User {
   fullName: string;
   isActive: boolean;
   createdAt: string;
+  fortyTwoId?: string;
+  fortyTwoLogin?: string;
+  avatarUrl?: string;
+  lastLoginAt?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (identifier: string, password: string) => Promise<void>;
+  loginWithToken: (token: string) => Promise<void>;
   register: (userData: RegisterData) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
@@ -93,6 +98,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const loginWithToken = async (authToken: string): Promise<void> => {
+    try {
+      setToken(authToken);
+      localStorage.setItem('authToken', authToken);
+      
+      // Fetch user data with the token
+      const response = await apiClient.get<User>('/auth/me');
+      setUser(response.data);
+    } catch (error: any) {
+      // Clear token if it's invalid
+      localStorage.removeItem('authToken');
+      setToken(null);
+      throw new Error('Invalid token');
+    }
+  };
+
   const register = async (userData: RegisterData): Promise<void> => {
     try {
       const response = await apiClient.post<AuthResponse>('/auth/register', userData);
@@ -117,6 +138,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     token,
     login,
+    loginWithToken,
     register,
     logout,
     isLoading,

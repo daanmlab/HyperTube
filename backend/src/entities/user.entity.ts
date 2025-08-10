@@ -20,12 +20,29 @@ export class User {
   @Column()
   lastName: string;
 
-  @Column()
+  @Column({ nullable: true })
   @Exclude()
   password: string;
 
   @Column({ default: true })
   isActive: boolean;
+
+  // OAuth fields
+  @Column({ nullable: true })
+  @Index()
+  fortyTwoId: string;
+
+  @Column({ nullable: true })
+  fortyTwoLogin: string;
+
+  @Column({ nullable: true })
+  avatarUrl: string;
+
+  @Column({ type: 'jsonb', nullable: true })
+  oauthData: any;
+
+  @Column({ nullable: true })
+  lastLoginAt: Date;
 
   @CreateDateColumn()
   createdAt: Date;
