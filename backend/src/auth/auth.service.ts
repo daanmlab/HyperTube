@@ -14,6 +14,16 @@ export interface FortyTwoUserData {
   oauthData: any;
 }
 
+export interface GoogleUserData {
+  googleId: string;
+  email: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  avatarUrl?: string;
+  oauthData: any;
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -113,6 +123,45 @@ export class AuthService {
   }
 
   async loginWithFortyTwo(user: any): Promise<AuthResponseDto> {
+    const payload = { 
+      email: user.email, 
+      sub: user.id, 
+      username: user.username 
+    };
+
+    return {
+      access_token: this.jwtService.sign(payload),
+      user,
+    };
+  }
+
+  async findOrCreateGoogleUser(userData: GoogleUserData): Promise<any> {
+    // First try to find user by Google ID
+    let user = await this.usersService.findByGoogleId(userData.googleId);
+    
+    if (!user) {
+      // Try to find by email
+      user = await this.usersService.findByEmail(userData.email);
+      
+      if (user) {
+        // Link existing account with Google
+        user = await this.usersService.linkGoogleAccount(user.id, userData);
+      } else {
+        // Create new user
+        user = await this.usersService.createFromGoogle(userData);
+      }
+    } else {
+      // Update existing Google user data
+      user = await this.usersService.updateGoogleData(user.id, userData);
+    }
+
+    // Update last login
+    await this.usersService.updateLastLogin(user.id);
+
+    return this.usersService.toSafeUser(user);
+  }
+
+  async loginWithGoogle(user: any): Promise<AuthResponseDto> {
     const payload = { 
       email: user.email, 
       sub: user.id, 

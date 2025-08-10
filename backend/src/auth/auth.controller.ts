@@ -24,6 +24,7 @@ import { CurrentUser } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
 import { AuthResponseDto, LoginDto, RegisterDto } from './dto/auth.dto';
 import { FortyTwoAuthGuard } from './guards/forty-two-auth.guard';
+import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @ApiTags('Authentication')
@@ -127,6 +128,38 @@ export class AuthController {
   async fortyTwoCallback(@Req() req: Request, @Res() res: Response) {
     const user = req.user;
     const authResponse = await this.authService.loginWithFortyTwo(user);
+    
+    // Redirect to frontend with the token
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const redirectUrl = `${frontendUrl}/auth/callback?token=${authResponse.access_token}`;
+    
+    return res.redirect(redirectUrl);
+  }
+
+  // Google OAuth routes
+  @Public()
+  @Get('google')
+  @UseGuards(GoogleAuthGuard)
+  @ApiOperation({ summary: 'Initiate Google OAuth login' })
+  @ApiResponse({ 
+    status: 302, 
+    description: 'Redirects to Google OAuth authorization page' 
+  })
+  async googleAuth() {
+    // This route initiates the OAuth flow
+  }
+
+  @Public()
+  @Get('google/callback')
+  @UseGuards(GoogleAuthGuard)
+  @ApiOperation({ summary: 'Google OAuth callback' })
+  @ApiResponse({ 
+    status: 302, 
+    description: 'OAuth callback, redirects to frontend with token' 
+  })
+  async googleCallback(@Req() req: Request, @Res() res: Response) {
+    const user = req.user;
+    const authResponse = await this.authService.loginWithGoogle(user);
     
     // Redirect to frontend with the token
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';

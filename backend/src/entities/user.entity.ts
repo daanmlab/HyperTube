@@ -36,6 +36,10 @@ export class User {
   fortyTwoLogin: string;
 
   @Column({ nullable: true })
+  @Index()
+  googleId: string;
+
+  @Column({ nullable: true })
   avatarUrl: string;
 
   @Column({ type: 'jsonb', nullable: true })
