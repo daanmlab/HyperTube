@@ -1,19 +1,29 @@
-import { Button } from '@/components/ui/button';
-import { useEffect } from 'react';
-import { ApiService } from './api';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { AuthCallbackPage } from '@/pages/AuthCallbackPage';
+import { AuthPage } from '@/pages/AuthPage';
+import { Dashboard } from '@/pages/Dashboard';
+import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
 import './index.css';
 
 export default function App() {
-  useEffect(() => {
-    const fetchData = async () => {
-      const response = await ApiService.app.appControllerGetHello();
-      console.log(response);
-    };
-    fetchData();
-    console.log('App component mounted');
-  }, []);
-  return <>
-    <Button>test</Button>
-  <h1>Vite + React</h1>
-  </>;
+  return (
+    <AuthProvider>
+      <Router>
+        <Routes>
+          <Route path="/auth" element={<AuthPage />} />
+          <Route path="/auth/callback" element={<AuthCallbackPage />} />
+          <Route 
+            path="/dashboard" 
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
+  );
 }
