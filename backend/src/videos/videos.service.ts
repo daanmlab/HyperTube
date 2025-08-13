@@ -188,7 +188,7 @@ export class VideosService {
     try {
       const files = fs.readdirSync(this.videosDir);
       const videos = files
-        .filter(file => !file.includes('.'))
+        .filter(file => !file.includes('.') && !file.endsWith('_hls'))
         .map(async videoId => {
           const hlsDir = path.join(this.videosDir, videoId + '_hls');
           const playlistPath = path.join(hlsDir, 'output.m3u8');

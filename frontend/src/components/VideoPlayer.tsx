@@ -53,8 +53,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, title }) => {
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    console.log('VideoPlayer - HLS URL:', hlsUrl);
-    console.log('VideoPlayer - API URL env:', import.meta.env.VITE_API_URL);
 
     let hls: Hls | null = null;
 
@@ -263,7 +261,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, title }) => {
         <div className="text-xs text-muted-foreground space-y-1">
           <p>• Adaptive bitrate streaming (360p-1080p)</p>
           <p>• Automatic quality switching based on bandwidth</p>
-          <p>• Video is transposed 90° clockwise during processing</p>
           {videoStatus?.availableForStreaming &&
             videoStatus?.status === 'ready' &&
             videoStatus?.progress < 100 && (
