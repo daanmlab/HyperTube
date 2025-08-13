@@ -8,5 +8,6 @@
   "workbench.sideBar.location": "left",
   "workbench.statusBar.visible": true,
   "window.title": "${rootName} - ${activeEditorShort}${separator}${appName}",
-  "window.menuBarVisibility": "toggle"
+  "window.menuBarVisibility": "toggle",
+  "editor.defaultFormatter": "esbenp.prettier-vscode"
 }

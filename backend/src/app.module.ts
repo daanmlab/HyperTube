@@ -6,12 +6,14 @@ import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { AppDataSource } from './data-source';
 import { UsersModule } from './users/users.module';
+import { VideosModule } from './videos/videos.module';
 
 @Module({
   imports: [
     TypeOrmModule.forRoot(AppDataSource.options),
     AuthModule,
     UsersModule,
+    VideosModule,
   ],
   controllers: [AppController],
   providers: [
