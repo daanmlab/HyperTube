@@ -4,18 +4,15 @@ export class AddGoogleOAuthFields1754840150167 implements MigrationInterface {
   name = 'AddGoogleOAuthFields1754840150167';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // Drop indexes if they exist
     await queryRunner.query(`DROP INDEX IF EXISTS "public"."IDX_users_email"`);
     await queryRunner.query(
       `DROP INDEX IF EXISTS "public"."IDX_users_username"`
     );
 
-    // Add new column if it doesn't exist
     await queryRunner.query(
       `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "googleId" character varying`
     );
 
-    // Create indexes if they don't exist
     await queryRunner.query(
       `CREATE INDEX IF NOT EXISTS "IDX_97672ac88f789774dd47f7c8be" ON "users" ("email")`
     );

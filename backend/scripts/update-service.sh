@@ -60,19 +60,15 @@ import { apiClient } from './client';
 import { Configuration } from './generated/configuration';
 $(echo -e "$IMPORTS")
 
-// Create configuration for the generated API client
 const apiConfig = new Configuration({
   basePath: import.meta.env.VITE_API_URL || 'http://localhost:3000',
 });
 
-// Create API instances using our configured axios client
 $(echo -e "$API_INSTANCES")
 
-// Service wrapper that exposes all the generated APIs
 export class ApiService {
 $(echo -e "$SERVICE_METHODS")}
 
-// Export individual API instances for direct use
 export const api = {
 $(echo -e "$EXPORT_APIS")};
 

@@ -76,7 +76,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, title }) => {
     video.addEventListener('canplay', handleCanPlay);
     video.addEventListener('error', handleError);
 
-    // Load HLS
     if (Hls.isSupported()) {
       hls = new Hls({
         debug: false,

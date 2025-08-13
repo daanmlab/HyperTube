@@ -284,7 +284,6 @@ class VideoTranscoder {
         `[TRANSCODER] Starting transcoding job for video: ${videoId}`
       );
 
-      // Update status to processing
       await this.updateStatus(videoId, {
         status: 'processing',
         progress: 0,
@@ -292,7 +291,6 @@ class VideoTranscoder {
         startTime: new Date().toISOString(),
       });
 
-      // Create output directory
       fs.mkdirSync(outputDir, { recursive: true });
 
       // Analyze video
@@ -347,7 +345,6 @@ class VideoTranscoder {
               `[TRANSCODER] Video ${videoId} is now ready for streaming with ${quality.name}`
             );
           } else {
-            // Update progress for additional qualities
             await this.updateStatus(videoId, {
               status: 'ready',
               progress: Math.round(10 + ((i + 1) / qualities.length) * 70),
@@ -475,7 +472,6 @@ process.on('SIGINT', () => {
   process.exit(0);
 });
 
-// Start the worker
 main().catch(error => {
   console.error('[WORKER] Fatal error:', error);
   process.exit(1);

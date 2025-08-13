@@ -35,7 +35,6 @@ async function bootstrap() {
     credentials: true,
   });
   
-  // Get TypeORM DataSource and run migrations
   const dataSource = app.get(DataSource);
   await dataSource.runMigrations();
   

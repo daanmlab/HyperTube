@@ -40,7 +40,6 @@ export const VideoList: React.FC<VideoListProps> = ({
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Load videos from backend API
   const loadVideos = async () => {
     setIsLoading(true);
     try {

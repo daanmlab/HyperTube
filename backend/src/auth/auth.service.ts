@@ -58,7 +58,6 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Update last login
     await this.usersService.updateLastLogin(user.id);
 
     const payload = { 
@@ -97,26 +96,20 @@ export class AuthService {
   }
 
   async findOrCreateFortyTwoUser(userData: FortyTwoUserData): Promise<any> {
-    // First try to find user by 42 ID
     let user = await this.usersService.findByFortyTwoId(userData.fortyTwoId);
     
     if (!user) {
-      // Try to find by email
       user = await this.usersService.findByEmail(userData.email);
       
       if (user) {
-        // Link existing account with 42
         user = await this.usersService.linkFortyTwoAccount(user.id, userData);
       } else {
-        // Create new user
         user = await this.usersService.createFromFortyTwo(userData);
       }
     } else {
-      // Update existing 42 user data
       user = await this.usersService.updateFortyTwoData(user.id, userData);
     }
 
-    // Update last login
     await this.usersService.updateLastLogin(user.id);
 
     return this.usersService.toSafeUser(user);
@@ -136,26 +129,20 @@ export class AuthService {
   }
 
   async findOrCreateGoogleUser(userData: GoogleUserData): Promise<any> {
-    // First try to find user by Google ID
     let user = await this.usersService.findByGoogleId(userData.googleId);
     
     if (!user) {
-      // Try to find by email
       user = await this.usersService.findByEmail(userData.email);
       
       if (user) {
-        // Link existing account with Google
         user = await this.usersService.linkGoogleAccount(user.id, userData);
       } else {
-        // Create new user
         user = await this.usersService.createFromGoogle(userData);
       }
     } else {
-      // Update existing Google user data
       user = await this.usersService.updateGoogleData(user.id, userData);
     }
 
-    // Update last login
     await this.usersService.updateLastLogin(user.id);
 
     return this.usersService.toSafeUser(user);

@@ -199,7 +199,6 @@ export class VideosService {
           let fileSize = 0;
           let availableQualities: string[] = [];
 
-          // Check for available qualities first
           DEFAULT_QUALITIES.forEach(quality => {
             const qualityPlaylist = path.join(
               hlsDir,
@@ -210,7 +209,6 @@ export class VideosService {
             }
           });
 
-          // Set status based on available content
           if (availableQualities.length > 0) {
             status = 'ready'; // Ready to play if ANY quality is available
           } else if (fs.existsSync(originalPath)) {
@@ -225,7 +223,6 @@ export class VideosService {
             // Ignore stat errors
           }
 
-          // Get enhanced status from Redis
           let enhancedStatus = null;
           try {
             const statusJson = await this.redis.get(`video_status:${videoId}`);
@@ -268,18 +265,15 @@ export class VideosService {
     const hlsDir = path.join(this.videosDir, videoId + '_hls');
     const masterPlaylistPath = path.join(hlsDir, 'master.m3u8');
 
-    // Set CORS headers for HLS streaming
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
     res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
     res.setHeader('Cache-Control', 'no-cache');
 
-    // Generate dynamic master playlist with available qualities
     let masterPlaylist = '#EXTM3U\n#EXT-X-VERSION:3\n\n';
     let hasAnyQuality = false;
 
-    // Check for available quality levels
     for (const quality of DEFAULT_QUALITIES) {
       const qualityPlaylist = path.join(hlsDir, `output${quality.suffix}.m3u8`);
       if (fs.existsSync(qualityPlaylist)) {
@@ -331,14 +325,12 @@ export class VideosService {
       return res.status(404).send('Quality playlist not found');
     }
 
-    // Set CORS headers for HLS streaming
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
     res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
     res.setHeader('Cache-Control', 'no-cache');
 
-    // Read and modify the playlist to fix segment URLs
     const playlistContent = fs.readFileSync(playlistPath, 'utf8');
     const modifiedPlaylist = playlistContent.replace(
       /^(output_\w+\.ts)$/gm,
@@ -370,7 +362,6 @@ export class VideosService {
       return res.status(404).send('Segment not found');
     }
 
-    // Set CORS headers for HLS segments
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
@@ -393,7 +384,6 @@ export class VideosService {
       return res.status(404).send('Thumbnail not found');
     }
 
-    // Set CORS headers for images
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -449,17 +439,14 @@ export class VideosService {
       const originalPath = path.join(this.videosDir, videoId);
       const hlsDir = path.join(this.videosDir, videoId + '_hls');
 
-      // Delete original file
       if (fs.existsSync(originalPath)) {
         fs.unlinkSync(originalPath);
       }
 
-      // Delete HLS directory
       if (fs.existsSync(hlsDir)) {
         fs.rmSync(hlsDir, { recursive: true, force: true });
       }
 
-      // Delete status from Redis
       await this.redis.del(`video_status:${videoId}`);
 
       return { success: true, message: 'Video deleted successfully' };

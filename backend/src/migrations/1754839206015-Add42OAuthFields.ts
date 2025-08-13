@@ -4,13 +4,11 @@ export class Add42OAuthFields1754839206015 implements MigrationInterface {
   name = 'Add42OAuthFields1754839206015';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // Drop indexes if they exist
     await queryRunner.query(`DROP INDEX IF EXISTS "public"."IDX_users_email"`);
     await queryRunner.query(
       `DROP INDEX IF EXISTS "public"."IDX_users_username"`
     );
 
-    // Add new columns if they don't exist
     await queryRunner.query(
       `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "fortyTwoId" character varying`
     );
@@ -21,18 +19,16 @@ export class Add42OAuthFields1754839206015 implements MigrationInterface {
       `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "avatarUrl" character varying`
     );
     await queryRunner.query(
-      `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "oauthData" jsonb`
+      `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "oauthData" json`
     );
     await queryRunner.query(
       `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "lastLoginAt" TIMESTAMP`
     );
 
-    // Make password nullable
     await queryRunner.query(
       `ALTER TABLE "users" ALTER COLUMN "password" DROP NOT NULL`
     );
 
-    // Create new indexes
     await queryRunner.query(
       `CREATE INDEX IF NOT EXISTS "IDX_97672ac88f789774dd47f7c8be" ON "users" ("email")`
     );

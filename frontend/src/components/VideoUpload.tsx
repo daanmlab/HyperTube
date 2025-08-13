@@ -101,7 +101,6 @@ export const VideoUpload: React.FC<VideoUploadProps> = ({
               message: status.error || status.message || 'Processing failed',
             });
           } else if (status.availableForStreaming) {
-            // Update message if streaming is available while still processing
             setUploadStatus({
               status: 'processing',
               message: `Ready for streaming! Processing additional qualities... (${status.progress}%)`,
@@ -109,7 +108,6 @@ export const VideoUpload: React.FC<VideoUploadProps> = ({
             });
             onVideoUploaded?.(filename); // Notify that streaming is available
           } else {
-            // Still processing
             setUploadStatus({
               status: 'processing',
               message: `Processing video... ${status.message} (${status.progress}%)`,
@@ -122,7 +120,6 @@ export const VideoUpload: React.FC<VideoUploadProps> = ({
         }
       }, 3000);
 
-      // Stop polling after 10 minutes (increased for large files)
       setTimeout(() => {
         clearInterval(pollInterval);
         if (uploadStatus.status === 'processing') {
