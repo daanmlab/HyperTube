@@ -110,31 +110,6 @@ export const Dashboard: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-
-        <Card className="mt-8">
-          <CardHeader>
-            <CardTitle>🎬 Welcome to HyperTube!</CardTitle>
-            <CardDescription>
-              Your movie streaming platform is ready to go.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground mb-4">
-              You're now logged in and can access all the features of HyperTube.
-              This authentication system includes:
-            </p>
-            <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground">
-              <li>Secure JWT token-based authentication</li>
-              <li>Password hashing with bcrypt</li>
-              <li>Form validation on both frontend and backend</li>
-              <li>Protected routes and API endpoints</li>
-              <li>User profile management</li>
-              <li>Responsive UI with Tailwind CSS and shadcn/ui</li>
-              <li>Video upload and transposition processing</li>
-              <li>HLS streaming with adaptive bitrate</li>
-            </ul>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
