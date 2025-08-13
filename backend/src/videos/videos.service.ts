@@ -81,7 +81,14 @@ export class VideosService {
     if (!fs.existsSync(playlistPath)) {
       return res.status(404).send('HLS playlist not found or still processing');
     }
+
+    // Set CORS headers for HLS streaming
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
     res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+    res.setHeader('Cache-Control', 'no-cache');
+
     fs.createReadStream(playlistPath).pipe(res);
   }
 
@@ -90,7 +97,15 @@ export class VideosService {
     if (!fs.existsSync(segmentPath)) {
       return res.status(404).send('Segment not found');
     }
+
+    // Set CORS headers for HLS segments
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
     res.setHeader('Content-Type', 'video/MP2T');
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Cache-Control', 'public, max-age=31536000');
+
     fs.createReadStream(segmentPath).pipe(res);
   }
 }

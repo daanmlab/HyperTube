@@ -6,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import Hls from 'hls.js';
 import { Pause, Play, RotateCcw, Volume2, VolumeX } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 
@@ -30,6 +31,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, title }) => {
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
+    console.log('VideoPlayer - HLS URL:', hlsUrl);
+    console.log('VideoPlayer - API URL env:', import.meta.env.VITE_API_URL);
+
+    let hls: Hls | null = null;
 
     const updateTime = () => setCurrentTime(video.currentTime);
     const updateDuration = () => setDuration(video.duration);
@@ -46,12 +51,35 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, title }) => {
     video.addEventListener('canplay', handleCanPlay);
     video.addEventListener('error', handleError);
 
-    // Try to load HLS if supported
-    if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    // Load HLS
+    if (Hls.isSupported()) {
+      hls = new Hls({
+        debug: false,
+        enableWorker: true,
+        lowLatencyMode: true,
+      });
+
+      hls.loadSource(hlsUrl);
+      hls.attachMedia(video);
+
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        console.log('HLS manifest parsed, ready to play');
+        setIsLoading(false);
+      });
+
+      hls.on(Hls.Events.ERROR, (event, data) => {
+        console.error('HLS error:', data);
+        if (data.fatal) {
+          setError(`HLS Error: ${data.details || 'Unknown error'}`);
+          setIsLoading(false);
+        }
+      });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      // Native HLS support (Safari)
       video.src = hlsUrl;
     } else {
-      // For browsers that don't support HLS natively, you might want to use hls.js
       setError('HLS playback not supported in this browser');
+      setIsLoading(false);
     }
 
     return () => {
@@ -60,6 +88,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, title }) => {
       video.removeEventListener('loadstart', handleLoadStart);
       video.removeEventListener('canplay', handleCanPlay);
       video.removeEventListener('error', handleError);
+
+      if (hls) {
+        hls.destroy();
+      }
     };
   }, [hlsUrl]);
 
@@ -126,6 +158,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, title }) => {
             ref={videoRef}
             className="w-full aspect-video"
             controls={false}
+            crossOrigin="anonymous"
             onPlay={() => setIsPlaying(true)}
             onPause={() => setIsPlaying(false)}
           />
