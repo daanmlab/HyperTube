@@ -239,7 +239,7 @@ export const VideoList: React.FC<VideoListProps> = ({
       {selectedVideo && (
         <VideoPlayer
           videoId={selectedVideo}
-          title={`Transposed Video - ${selectedVideo}`}
+          title={`Transcoded Video - ${selectedVideo}`}
         />
       )}
     </div>

@@ -166,10 +166,10 @@ export const VideoUpload: React.FC<VideoUploadProps> = ({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Upload className="h-5 w-5" />
-          Video Upload & Transpose
+          Video Upload & Transcode
         </CardTitle>
         <CardDescription>
-          Upload a video to test the transposition and streaming functionality
+          Upload a video to test the transcoding and streaming functionality
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

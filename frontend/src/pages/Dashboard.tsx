@@ -100,7 +100,7 @@ export const Dashboard: React.FC = () => {
           <CardHeader>
             <CardTitle>🎬 Video Test Setup</CardTitle>
             <CardDescription>
-              Upload and test video transposition and streaming functionality
+              Upload and test video transcoding and streaming functionality
             </CardDescription>
           </CardHeader>
           <CardContent>
