@@ -1,3 +1,5 @@
+import { VideoStatusResponseDto } from '@/api/generated/models/video-status-response-dto';
+import { api } from '@/api/service';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -23,32 +25,27 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, title }) => {
   const [duration, setDuration] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [videoStatus, setVideoStatus] = useState<any>(null);
+  const [videoStatus, setVideoStatus] = useState<VideoStatusResponseDto | null>(
+    null
+  );
 
   const hlsUrl = `${
     import.meta.env.VITE_API_URL || 'http://localhost:3000'
   }/videos/${videoId}/master.m3u8`;
 
-  // Fetch video status to show processing info
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const response = await fetch(
-          `${
-            import.meta.env.VITE_API_URL || 'http://localhost:3000'
-          }/videos/${videoId}/status`
+        const response = await api.videos.videosControllerGetVideoStatus(
+          videoId
         );
-        if (response.ok) {
-          const status = await response.json();
-          setVideoStatus(status);
-        }
-      } catch (err) {
+        setVideoStatus(response.data);
+      } catch (err: any) {
         console.error('Failed to fetch video status:', err);
       }
     };
 
     fetchStatus();
-    // Poll for status updates if still processing
     const interval = setInterval(fetchStatus, 5000);
     return () => clearInterval(interval);
   }, [videoId]);
@@ -274,9 +271,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, title }) => {
                 • Additional qualities being processed ({videoStatus.progress}%)
               </p>
             )}
-          {videoStatus?.qualities && videoStatus.qualities.length > 0 && (
-            <p>• Available: {videoStatus.qualities.join(', ')}</p>
-          )}
+          {videoStatus?.availableQualities &&
+            videoStatus.availableQualities.length > 0 && (
+              <p>• Available: {videoStatus.availableQualities.join(', ')}</p>
+            )}
         </div>
       </CardContent>
     </Card>
