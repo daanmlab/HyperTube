@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { AuthResponseDto, LoginDto, RegisterDto } from './dto/auth.dto';
@@ -28,12 +32,12 @@ export interface GoogleUserData {
 export class AuthService {
   constructor(
     private usersService: UsersService,
-    private jwtService: JwtService,
+    private jwtService: JwtService
   ) {}
 
   async validateUser(identifier: string, password: string): Promise<any> {
     const user = await this.usersService.findByEmailOrUsername(identifier);
-    
+
     if (!user) {
       return null;
     }
@@ -42,8 +46,11 @@ export class AuthService {
       throw new UnauthorizedException('Account has been deactivated');
     }
 
-    const isPasswordValid = await this.usersService.validatePassword(password, user.password);
-    
+    const isPasswordValid = await this.usersService.validatePassword(
+      password,
+      user.password
+    );
+
     if (!isPasswordValid) {
       return null;
     }
@@ -52,19 +59,21 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto): Promise<AuthResponseDto> {
-    const user = await this.validateUser(loginDto.identifier, loginDto.password);
-    
+    const user = await this.validateUser(
+      loginDto.identifier,
+      loginDto.password
+    );
+
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Update last login
     await this.usersService.updateLastLogin(user.id);
 
-    const payload = { 
-      email: user.email, 
-      sub: user.id, 
-      username: user.username 
+    const payload = {
+      email: user.email,
+      sub: user.id,
+      username: user.username,
     };
 
     return {
@@ -78,10 +87,10 @@ export class AuthService {
       const user = await this.usersService.create(registerDto);
       const safeUser = this.usersService.toSafeUser(user);
 
-      const payload = { 
-        email: safeUser.email, 
-        sub: safeUser.id, 
-        username: safeUser.username 
+      const payload = {
+        email: safeUser.email,
+        sub: safeUser.id,
+        username: safeUser.username,
       };
 
       return {
@@ -97,36 +106,30 @@ export class AuthService {
   }
 
   async findOrCreateFortyTwoUser(userData: FortyTwoUserData): Promise<any> {
-    // First try to find user by 42 ID
     let user = await this.usersService.findByFortyTwoId(userData.fortyTwoId);
-    
+
     if (!user) {
-      // Try to find by email
       user = await this.usersService.findByEmail(userData.email);
-      
+
       if (user) {
-        // Link existing account with 42
         user = await this.usersService.linkFortyTwoAccount(user.id, userData);
       } else {
-        // Create new user
         user = await this.usersService.createFromFortyTwo(userData);
       }
     } else {
-      // Update existing 42 user data
       user = await this.usersService.updateFortyTwoData(user.id, userData);
     }
 
-    // Update last login
     await this.usersService.updateLastLogin(user.id);
 
     return this.usersService.toSafeUser(user);
   }
 
   async loginWithFortyTwo(user: any): Promise<AuthResponseDto> {
-    const payload = { 
-      email: user.email, 
-      sub: user.id, 
-      username: user.username 
+    const payload = {
+      email: user.email,
+      sub: user.id,
+      username: user.username,
     };
 
     return {
@@ -136,36 +139,30 @@ export class AuthService {
   }
 
   async findOrCreateGoogleUser(userData: GoogleUserData): Promise<any> {
-    // First try to find user by Google ID
     let user = await this.usersService.findByGoogleId(userData.googleId);
-    
+
     if (!user) {
-      // Try to find by email
       user = await this.usersService.findByEmail(userData.email);
-      
+
       if (user) {
-        // Link existing account with Google
         user = await this.usersService.linkGoogleAccount(user.id, userData);
       } else {
-        // Create new user
         user = await this.usersService.createFromGoogle(userData);
       }
     } else {
-      // Update existing Google user data
       user = await this.usersService.updateGoogleData(user.id, userData);
     }
 
-    // Update last login
     await this.usersService.updateLastLogin(user.id);
 
     return this.usersService.toSafeUser(user);
   }
 
   async loginWithGoogle(user: any): Promise<AuthResponseDto> {
-    const payload = { 
-      email: user.email, 
-      sub: user.id, 
-      username: user.username 
+    const payload = {
+      email: user.email,
+      sub: user.id,
+      username: user.username,
     };
 
     return {

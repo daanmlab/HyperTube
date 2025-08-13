@@ -1,6 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 
-// Base API configuration
 export const API_CONFIG = {
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
   timeout: 30000,
@@ -9,7 +8,6 @@ export const API_CONFIG = {
   },
 } as const;
 
-// Create axios instance
 export const apiClient: AxiosInstance = axios.create(API_CONFIG);
 
 // Request interceptor for adding auth token
@@ -35,7 +33,7 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       // Handle unauthorized access
       localStorage.removeItem('authToken');
-      window.location.href = '/login';
+      window.location.href = '/auth';
     }
     return Promise.reject(error);
   }

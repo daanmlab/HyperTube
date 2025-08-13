@@ -37,7 +37,6 @@
     "editor.guides.bracketPairs": true,
     "editor.minimap.enabled": true,
     "editor.minimap.maxColumn": 120,
-    
     // File Explorer
     "explorer.compactFolders": false,
     "explorer.fileNesting.enabled": true,
@@ -51,24 +50,48 @@
       "docker-compose.yml": "docker-compose.*.yml, Dockerfile*",
       "*.env": ".env.*"
     },
-    
     // TypeScript
     "typescript.preferences.importModuleSpecifier": "relative",
     "typescript.updateImportsOnFileMove.enabled": "always",
     "typescript.suggest.autoImports": true,
     "typescript.preferences.quoteStyle": "single",
-    
+    // Biome (disable if present)
+    "biome.enable": false,
+    "biome.format.enable": false,
+    "biome.lint.enable": false,
+    // Set Prettier as the default formatter
+    "[javascript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[typescript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[json]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[jsonc]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[javascriptreact]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[typescriptreact]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
     // ESLint
     "eslint.workingDirectories": ["backend", "frontend", "worker"],
-    "eslint.validate": ["javascript", "javascriptreact", "typescript", "typescriptreact"],
-    
+    "eslint.validate": [
+      "javascript",
+      "javascriptreact",
+      "typescript",
+      "typescriptreact"
+    ],
     // Prettier
     "prettier.requireConfig": true,
     "prettier.singleQuote": true,
     "prettier.trailingComma": "es5",
     "prettier.semi": true,
     "prettier.printWidth": 80,
-    
     // Files
     "files.exclude": {
       "**/node_modules": true,
@@ -84,7 +107,6 @@
       "**/dist/**": true,
       "**/build/**": true
     },
-    
     // Search
     "search.exclude": {
       "**/node_modules": true,
@@ -92,32 +114,26 @@
       "**/build": true,
       "**/*.log": true
     },
-    
     // Terminal
     "terminal.integrated.cwd": "${workspaceFolder}",
     "terminal.integrated.defaultProfile.osx": "zsh",
-    
     // Git
     "git.enableSmartCommit": true,
     "git.confirmSync": false,
     "git.autofetch": true,
-    
     // Docker
     "docker.languageserver.formatter.ignoreMultilineInstructions": true,
-    
     // Emmet
     "emmet.includeLanguages": {
       "typescript": "typescriptreact",
       "javascript": "javascriptreact"
     },
-    
     // File Associations
     "files.associations": {
       "*.env.*": "properties",
       "docker-compose*.yml": "dockercompose",
       "Dockerfile*": "dockerfile"
     },
-    
     // JSON
     "json.schemas": [
       {
@@ -274,7 +290,7 @@
         "dependsOrder": "parallel",
         "dependsOn": [
           "🔧 Backend: Install Dependencies",
-          "⚛️ Frontend: Install Dependencies", 
+          "⚛️ Frontend: Install Dependencies",
           "🔄 Worker: Install Dependencies"
         ],
         "group": "build"
@@ -346,36 +362,29 @@
       "bradlc.vscode-tailwindcss",
       "esbenp.prettier-vscode",
       "dbaeumer.vscode-eslint",
-      
       // React & Frontend
       "ms-vscode.vscode-react-refactor",
       "formulahendry.auto-rename-tag",
       "christian-kohler.path-intellisense",
       "ms-vscode.vscode-json",
-      
       // Docker & DevOps
       "ms-azuretools.vscode-docker",
       "ms-vscode-remote.remote-containers",
-      
       // Database
       "ms-mssql.mssql",
       "ckolkman.vscode-postgres",
-      
       // Git & Version Control
       "eamodio.gitlens",
       "github.vscode-pull-request-github",
-      
       // Utilities
       "ms-vscode.vscode-thunder-client",
       "ms-vscode.vscode-todo-highlight",
       "streetsidesoftware.code-spell-checker",
       "usernamehw.errorlens",
       "gruntfuggly.todo-tree",
-      
       // Themes & UI
       "pkief.material-icon-theme",
       "github.github-vscode-theme",
-      
       // Testing
       "ms-vscode.test-adapter-converter",
       "hbenl.vscode-test-explorer"

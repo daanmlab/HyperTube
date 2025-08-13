@@ -10,11 +10,10 @@ import { User } from '../entities/user.entity';
 export class UsersService {
   constructor(
     @InjectRepository(User)
-    private usersRepository: Repository<User>,
+    private usersRepository: Repository<User>
   ) {}
 
   async create(createUserDto: RegisterDto): Promise<User> {
-    // Check if user with email already exists
     const existingUserByEmail = await this.usersRepository.findOne({
       where: { email: createUserDto.email },
     });
@@ -23,7 +22,6 @@ export class UsersService {
       throw new ConflictException('User with this email already exists');
     }
 
-    // Check if user with username already exists
     const existingUserByUsername = await this.usersRepository.findOne({
       where: { username: createUserDto.username },
     });
@@ -32,11 +30,12 @@ export class UsersService {
       throw new ConflictException('User with this username already exists');
     }
 
-    // Hash password
     const saltRounds = 12;
-    const hashedPassword = await bcrypt.hash(createUserDto.password, saltRounds);
+    const hashedPassword = await bcrypt.hash(
+      createUserDto.password,
+      saltRounds
+    );
 
-    // Create new user
     const user = this.usersRepository.create({
       ...createUserDto,
       password: hashedPassword,
@@ -55,10 +54,7 @@ export class UsersService {
 
   async findByEmailOrUsername(identifier: string): Promise<User | null> {
     return this.usersRepository.findOne({
-      where: [
-        { email: identifier },
-        { username: identifier },
-      ],
+      where: [{ email: identifier }, { username: identifier }],
     });
   }
 
@@ -75,16 +71,14 @@ export class UsersService {
   }
 
   async createFromFortyTwo(userData: FortyTwoUserData): Promise<User> {
-    // Check if username is already taken, if so, append a number
     let username = userData.username;
     let counter = 1;
-    
+
     while (await this.findByUsername(username)) {
       username = `${userData.username}${counter}`;
       counter++;
     }
 
-    // Create new user from 42 data
     const user = this.usersRepository.create({
       email: userData.email,
       username: username,
@@ -101,7 +95,10 @@ export class UsersService {
     return this.usersRepository.save(user);
   }
 
-  async linkFortyTwoAccount(userId: string, userData: FortyTwoUserData): Promise<User> {
+  async linkFortyTwoAccount(
+    userId: string,
+    userData: FortyTwoUserData
+  ): Promise<User> {
     await this.usersRepository.update(userId, {
       fortyTwoId: userData.fortyTwoId,
       fortyTwoLogin: userData.fortyTwoLogin,
@@ -117,7 +114,10 @@ export class UsersService {
     return user;
   }
 
-  async updateFortyTwoData(userId: string, userData: FortyTwoUserData): Promise<User> {
+  async updateFortyTwoData(
+    userId: string,
+    userData: FortyTwoUserData
+  ): Promise<User> {
     await this.usersRepository.update(userId, {
       avatarUrl: userData.avatarUrl,
       oauthData: userData.oauthData,
@@ -132,16 +132,14 @@ export class UsersService {
   }
 
   async createFromGoogle(userData: GoogleUserData): Promise<User> {
-    // Check if username is already taken, if so, append a number
     let username = userData.username;
     let counter = 1;
-    
+
     while (await this.findByUsername(username)) {
       username = `${userData.username}${counter}`;
       counter++;
     }
 
-    // Create new user from Google data
     const user = this.usersRepository.create({
       email: userData.email,
       username: username,
@@ -157,7 +155,10 @@ export class UsersService {
     return this.usersRepository.save(user);
   }
 
-  async linkGoogleAccount(userId: string, userData: GoogleUserData): Promise<User> {
+  async linkGoogleAccount(
+    userId: string,
+    userData: GoogleUserData
+  ): Promise<User> {
     await this.usersRepository.update(userId, {
       googleId: userData.googleId,
       avatarUrl: userData.avatarUrl,
@@ -172,7 +173,10 @@ export class UsersService {
     return user;
   }
 
-  async updateGoogleData(userId: string, userData: GoogleUserData): Promise<User> {
+  async updateGoogleData(
+    userId: string,
+    userData: GoogleUserData
+  ): Promise<User> {
     await this.usersRepository.update(userId, {
       avatarUrl: userData.avatarUrl,
       oauthData: userData.oauthData,
@@ -186,7 +190,10 @@ export class UsersService {
     return user;
   }
 
-  async validatePassword(plainPassword: string, hashedPassword: string): Promise<boolean> {
+  async validatePassword(
+    plainPassword: string,
+    hashedPassword: string
+  ): Promise<boolean> {
     if (!hashedPassword) {
       return false; // OAuth users don't have passwords
     }
