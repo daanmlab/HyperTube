@@ -1,62 +1,63 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 export class VideoStatusResponseDto {
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Current processing status of the video',
     example: 'processing',
-    enum: ['uploaded', 'processing', 'ready', 'error']
+    enum: ['uploaded', 'processing', 'ready', 'error'],
   })
   status: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Current processing progress percentage',
     example: 45,
     minimum: 0,
-    maximum: 100
+    maximum: 100,
   })
   progress: number;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Human-readable status message',
-    example: 'Processing quality 720p...'
+    example: 'Processing quality 720p...',
   })
   message: string;
 
-  @ApiProperty({ 
-    description: 'Whether the video is available for streaming (at least one quality ready)',
-    example: true
+  @ApiProperty({
+    description:
+      'Whether the video is available for streaming (at least one quality ready)',
+    example: true,
   })
   availableForStreaming: boolean;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'List of available quality levels',
     example: ['360p', '480p'],
-    type: [String]
+    type: [String],
   })
   availableQualities: string[];
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Number of completed qualities',
-    example: 2
+    example: 2,
   })
   completedQualities: number;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Total number of qualities being processed',
-    example: 4
+    example: 4,
   })
   totalQualities: number;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Estimated time remaining in seconds',
     example: 120,
-    required: false
+    required: false,
   })
   estimatedTimeRemaining?: number;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Error message if status is error',
-    required: false
+    required: false,
   })
   error?: string;
 }

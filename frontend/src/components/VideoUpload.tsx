@@ -67,8 +67,10 @@ export const VideoUpload: React.FC<VideoUploadProps> = ({
       setUploadStatus({ status: 'uploading', message: 'Uploading video...' });
 
       // Use the generated API service for upload
-      const response = await api.videos.videosControllerUploadVideo(selectedFile);
-      
+      const response = await api.videos.videosControllerUploadVideo(
+        selectedFile
+      );
+
       // Now we have properly typed response data
       const { filename, message } = response.data;
       setUploadStatus({
@@ -80,9 +82,10 @@ export const VideoUpload: React.FC<VideoUploadProps> = ({
       // Poll for processing status using the new status endpoint
       const pollInterval = setInterval(async () => {
         try {
-          const statusResponse = await api.videos.videosControllerGetVideoStatus(filename);
+          const statusResponse =
+            await api.videos.videosControllerGetVideoStatus(filename);
           const status = statusResponse.data; // Now properly typed as VideoStatusResponseDto
-          
+
           if (status.status === 'ready') {
             clearInterval(pollInterval);
             setUploadStatus({

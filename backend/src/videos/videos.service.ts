@@ -3,10 +3,8 @@ import type { Response } from 'express';
 import Redis from 'ioredis';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { VideoUploadResponseDto } from './dto/video-upload-response.dto';
 import { VideoStatusResponseDto } from './dto/video-status-response.dto';
-import { VideoMetadataResponseDto } from './dto/video-metadata-response.dto';
-import { VideoListResponseDto } from './dto/video-list-response.dto';
+import { VideoUploadResponseDto } from './dto/video-upload-response.dto';
 
 interface TranscodingOptions {
   qualities?: string[];
@@ -81,7 +79,10 @@ export class VideosService {
     port: Number(process.env.REDIS_PORT || 6379),
   });
 
-  handleUpload(file: Express.Multer.File, options?: TranscodingOptions): VideoUploadResponseDto {
+  handleUpload(
+    file: Express.Multer.File,
+    options?: TranscodingOptions
+  ): VideoUploadResponseDto {
     // Enhanced job with transcoding options
     const enhancedJob = {
       type: 'processVideo',
@@ -103,12 +104,12 @@ export class VideosService {
     };
 
     this.redis.rpush('jobs', JSON.stringify(enhancedJob));
-    
-    return { 
-      filename: file.filename, 
-      path: file.path, 
+
+    return {
+      filename: file.filename,
+      path: file.path,
       status: 'uploaded',
-      message: 'Video uploaded successfully and queued for processing'
+      message: 'Video uploaded successfully and queued for processing',
     };
   }
 
@@ -137,8 +138,8 @@ export class VideosService {
       const originalPath = path.join(this.videosDir, videoId);
 
       if (fs.existsSync(playlistPath)) {
-        return { 
-          status: 'ready', 
+        return {
+          status: 'ready',
           progress: 100,
           message: 'Video ready for streaming',
           availableForStreaming: true,
@@ -147,8 +148,8 @@ export class VideosService {
           totalQualities: 4,
         };
       } else if (fs.existsSync(originalPath)) {
-        return { 
-          status: 'processing', 
+        return {
+          status: 'processing',
           progress: 0,
           message: 'Video being processed',
           availableForStreaming: false,
@@ -157,8 +158,8 @@ export class VideosService {
           totalQualities: 4,
         };
       } else {
-        return { 
-          status: 'error', 
+        return {
+          status: 'error',
           progress: 0,
           message: 'Video not found',
           availableForStreaming: false,
@@ -170,8 +171,8 @@ export class VideosService {
       }
     } catch (error) {
       console.error('Error getting video status:', error);
-      return { 
-        status: 'error', 
+      return {
+        status: 'error',
         progress: 0,
         message: 'Failed to get video status',
         availableForStreaming: false,

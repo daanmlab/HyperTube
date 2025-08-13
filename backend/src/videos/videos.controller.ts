@@ -19,10 +19,8 @@ import {
 } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { Public } from '../auth/decorators/public.decorator';
-import { VideoUploadResponseDto } from './dto/video-upload-response.dto';
 import { VideoStatusResponseDto } from './dto/video-status-response.dto';
-import { VideoMetadataResponseDto } from './dto/video-metadata-response.dto';
-import { VideoListResponseDto } from './dto/video-list-response.dto';
+import { VideoUploadResponseDto } from './dto/video-upload-response.dto';
 import { VideosService } from './videos.service';
 
 @ApiTags('Videos')
@@ -58,7 +56,9 @@ export class VideosController {
       dest: '/app/videos', // Shared volume path
     })
   )
-  uploadVideo(@UploadedFile() file: Express.Multer.File): VideoUploadResponseDto {
+  uploadVideo(
+    @UploadedFile() file: Express.Multer.File
+  ): VideoUploadResponseDto {
     return this.videosService.handleUpload(file);
   }
 
@@ -80,7 +80,9 @@ export class VideosController {
     description: 'Returns video processing status and progress.',
     type: VideoStatusResponseDto,
   })
-  async getVideoStatus(@Param('videoId') videoId: string): Promise<VideoStatusResponseDto> {
+  async getVideoStatus(
+    @Param('videoId') videoId: string
+  ): Promise<VideoStatusResponseDto> {
     return this.videosService.getVideoStatus(videoId);
   }
 

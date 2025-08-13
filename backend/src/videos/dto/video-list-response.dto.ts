@@ -1,68 +1,68 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 export class VideoListItemDto {
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Video filename/ID',
-    example: '1234567890-video.mp4'
+    example: '1234567890-video.mp4',
   })
   id: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Original filename',
-    example: 'my-video.mp4'
+    example: 'my-video.mp4',
   })
   originalName: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Current processing status',
     example: 'ready',
-    enum: ['uploaded', 'processing', 'ready', 'error']
+    enum: ['uploaded', 'processing', 'ready', 'error'],
   })
   status: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Whether video is available for streaming',
-    example: true
+    example: true,
   })
   availableForStreaming: boolean;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Available quality levels',
     example: ['360p', '480p', '720p'],
-    type: [String]
+    type: [String],
   })
   availableQualities: string[];
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Video duration in seconds',
     example: 120.5,
-    required: false
+    required: false,
   })
   duration?: number;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Upload timestamp',
-    example: '2025-08-13T10:30:00Z'
+    example: '2025-08-13T10:30:00Z',
   })
   uploadedAt: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'File size in bytes',
-    example: 102400000
+    example: 102400000,
   })
   fileSize: number;
 }
 
 export class VideoListResponseDto {
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'List of videos',
-    type: [VideoListItemDto]
+    type: [VideoListItemDto],
   })
   videos: VideoListItemDto[];
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Total number of videos',
-    example: 25
+    example: 25,
   })
   total: number;
 }
