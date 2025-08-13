@@ -29,10 +29,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, title }) => {
     import.meta.env.VITE_API_URL || 'http://localhost:3000'
   }/videos/${videoId}/master.m3u8`;
 
-  const fallbackHlsUrl = `${
-    import.meta.env.VITE_API_URL || 'http://localhost:3000'
-  }/videos/${videoId}/hls.m3u8`;
-
   // Fetch video status to show processing info
   useEffect(() => {
     const fetchStatus = async () => {
@@ -99,18 +95,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, title }) => {
       hls.on(Hls.Events.ERROR, (event, data) => {
         console.error('HLS error:', data);
         if (data.fatal) {
-          console.log('Trying fallback HLS URL...');
-          // Try fallback URL
-          hls?.loadSource(fallbackHlsUrl);
+          console.error('Fatal HLS error, cannot recover');
+          setError('Failed to load video stream');
+          setIsLoading(false);
         }
       });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      // Native HLS support (Safari) - try master playlist first
+      // Native HLS support (Safari)
       video.src = hlsUrl;
-      video.onerror = () => {
-        console.log('Master playlist failed, trying fallback...');
-        video.src = fallbackHlsUrl;
-      };
     } else {
       setError('HLS playback not supported in this browser');
       setIsLoading(false);

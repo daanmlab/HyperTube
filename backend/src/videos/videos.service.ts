@@ -260,23 +260,8 @@ export class VideosService {
   }
 
   async getHlsPlaylist(videoId: string, res: Response) {
-    const playlistPath = path.join(
-      this.videosDir,
-      videoId + '_hls',
-      'output.m3u8'
-    );
-    if (!fs.existsSync(playlistPath)) {
-      return res.status(404).send('HLS playlist not found or still processing');
-    }
-
-    // Set CORS headers for HLS streaming
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
-    res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-    res.setHeader('Cache-Control', 'no-cache');
-
-    fs.createReadStream(playlistPath).pipe(res);
+    // Simply forward to master playlist since it works correctly
+    return this.getMasterPlaylist(videoId, res);
   }
 
   async getMasterPlaylist(videoId: string, res: Response) {
@@ -353,11 +338,34 @@ export class VideosService {
     res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
     res.setHeader('Cache-Control', 'no-cache');
 
-    fs.createReadStream(playlistPath).pipe(res);
+    // Read and modify the playlist to fix segment URLs
+    const playlistContent = fs.readFileSync(playlistPath, 'utf8');
+    const modifiedPlaylist = playlistContent.replace(
+      /^(output_\w+\.ts)$/gm,
+      '../$1'
+    );
+
+    res.send(modifiedPlaylist);
   }
 
   async getHlsSegment(videoId: string, segment: string, res: Response) {
+    console.log(
+      'getHlsSegment called with videoId:',
+      videoId,
+      'segment:',
+      segment
+    );
+
+    // Special case: if segment is hls.m3u8, redirect to the HLS playlist method
+    if (segment === 'hls.m3u8') {
+      console.log('Redirecting hls.m3u8 request to getHlsPlaylist method');
+      return this.getHlsPlaylist(videoId, res);
+    }
+
     const segmentPath = path.join(this.videosDir, videoId + '_hls', segment);
+    console.log('segmentPath:', segmentPath);
+    console.log('segment exists:', fs.existsSync(segmentPath));
+
     if (!fs.existsSync(segmentPath)) {
       return res.status(404).send('Segment not found');
     }
