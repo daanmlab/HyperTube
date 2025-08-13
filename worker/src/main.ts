@@ -29,11 +29,11 @@ function processVideoTask(jobData: ProcessVideoJob) {
     // Generate HLS output (m3u8 playlist + ts segments)
     const playlistPath = path.join(outputDir, 'output.m3u8');
     const segmentPattern = path.join(outputDir, 'segment_%03d.ts');
-    
+
     // FFmpeg command for HLS with transpose
     const cmd = `ffmpeg -y -i "${inputPath}" -vf "transpose=${transpose}" -c:v libx264 -c:a aac -hls_time ${segmentTime} -hls_list_size 0 -f hls "${playlistPath}"`;
     console.log('Running FFmpeg HLS:', cmd);
-    
+
     exec(cmd, (err: Error | null, stdout: string, stderr: string) => {
       if (err) {
         console.error('FFmpeg HLS error:', err);
@@ -48,7 +48,7 @@ function processVideoTask(jobData: ProcessVideoJob) {
     const outputPattern = path.join(outputDir, 'segment_%03d.mp4');
     const cmd = `ffmpeg -y -i "${inputPath}" -vf "transpose=${transpose}" -c:v libx264 -c:a copy -f segment -segment_time ${segmentTime} "${outputPattern}"`;
     console.log('Running FFmpeg:', cmd);
-    
+
     exec(cmd, (err: Error | null, stdout: string, stderr: string) => {
       if (err) {
         console.error('FFmpeg error:', err);

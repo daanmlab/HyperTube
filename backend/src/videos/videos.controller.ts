@@ -3,22 +3,21 @@ import {
   Get,
   Param,
   Post,
-  Req,
   Res,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
-  ApiConsumes,
   ApiBody,
+  ApiConsumes,
   ApiOperation,
-  ApiResponse,
   ApiParam,
+  ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { FileInterceptor } from '@nestjs/platform-express';
-import type { Request, Response } from 'express';
-import type { VideosService } from './videos.service';
+import type { Response } from 'express';
+import { VideosService } from './videos.service';
 
 @ApiTags('Videos')
 @Controller('videos')
@@ -39,7 +38,10 @@ export class VideosController {
       },
     },
   })
-  @ApiResponse({ status: 200, description: 'Video upload accepted and processing started.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Video upload accepted and processing started.',
+  })
   @UseInterceptors(
     FileInterceptor('file', {
       dest: '/app/videos', // Shared volume path
@@ -52,7 +54,10 @@ export class VideosController {
   @Get(':videoId/hls.m3u8')
   @ApiOperation({ summary: 'Get HLS playlist for processed video' })
   @ApiParam({ name: 'videoId', type: 'string' })
-  @ApiResponse({ status: 200, description: 'Returns HLS playlist (.m3u8) for video.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns HLS playlist (.m3u8) for video.',
+  })
   async getHlsPlaylist(
     @Param('videoId') videoId: string,
     @Res() res: Response
@@ -64,7 +69,10 @@ export class VideosController {
   @ApiOperation({ summary: 'Get HLS segment for processed video' })
   @ApiParam({ name: 'videoId', type: 'string' })
   @ApiParam({ name: 'segment', type: 'string' })
-  @ApiResponse({ status: 200, description: 'Returns HLS segment (.ts) for video.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns HLS segment (.ts) for video.',
+  })
   async getHlsSegment(
     @Param('videoId') videoId: string,
     @Param('segment') segment: string,
