@@ -41,8 +41,8 @@ for api_file in $API_FILES; do
         # Generic conversion for other API files
         # Split on dash and capitalize each part
         API_CLASS=$(echo "$api_file" | awk -F- '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2)} 1' OFS='')
-        INSTANCE_NAME=$(echo "$API_CLASS" | sed 's/^./\L&/')
-        SERVICE_NAME=$(echo "$INSTANCE_NAME" | sed 's/Api$//')
+    SERVICE_NAME=$(echo "$API_CLASS" | sed 's/Api$//' | tr '[:upper:]' '[:lower:]')
+    INSTANCE_NAME="${SERVICE_NAME}Api"
     fi
     
     IMPORTS="${IMPORTS}import { ${API_CLASS} } from './generated/api';\n"

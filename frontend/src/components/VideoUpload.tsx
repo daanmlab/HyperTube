@@ -66,12 +66,10 @@ export const VideoUpload: React.FC<VideoUploadProps> = ({
     try {
       setUploadStatus({ status: 'uploading', message: 'Uploading video...' });
 
-      // Use the generated API service for upload
       const response = await api.videos.videosControllerUploadVideo(
         selectedFile
       );
 
-      // Now we have properly typed response data
       const { filename, message } = response.data;
       setUploadStatus({
         status: 'processing',
@@ -79,12 +77,11 @@ export const VideoUpload: React.FC<VideoUploadProps> = ({
         videoId: filename,
       });
 
-      // Poll for processing status using the new status endpoint
       const pollInterval = setInterval(async () => {
         try {
           const statusResponse =
             await api.videos.videosControllerGetVideoStatus(filename);
-          const status = statusResponse.data; // Now properly typed as VideoStatusResponseDto
+          const status = statusResponse.data;
 
           if (status.status === 'ready') {
             clearInterval(pollInterval);
@@ -106,7 +103,7 @@ export const VideoUpload: React.FC<VideoUploadProps> = ({
               message: `Ready for streaming! Processing additional qualities... (${status.progress}%)`,
               videoId: filename,
             });
-            onVideoUploaded?.(filename); // Notify that streaming is available
+            onVideoUploaded?.(filename);
           } else {
             setUploadStatus({
               status: 'processing',
@@ -115,7 +112,6 @@ export const VideoUpload: React.FC<VideoUploadProps> = ({
             });
           }
         } catch (error) {
-          // Continue polling on error - might be network issue
           console.error('Error checking video status:', error);
         }
       }, 3000);
