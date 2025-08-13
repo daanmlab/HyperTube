@@ -1,4 +1,4 @@
-import { apiClient } from '@/api/client';
+import { api } from '@/api/service';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -63,55 +63,72 @@ export const VideoUpload: React.FC<VideoUploadProps> = ({
   const handleUpload = async () => {
     if (!selectedFile) return;
 
-    const formData = new FormData();
-    formData.append('file', selectedFile);
-
     try {
       setUploadStatus({ status: 'uploading', message: 'Uploading video...' });
 
-      const response = await apiClient.post('/videos/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      const { filename } = response.data;
+      // Use the generated API service for upload
+      const response = await api.videos.videosControllerUploadVideo(selectedFile);
+      
+      // Now we have properly typed response data
+      const { filename, message } = response.data;
       setUploadStatus({
         status: 'processing',
-        message: 'Video uploaded! Processing and transposing...',
+        message: 'Video uploaded! Processing and transcoding...',
         videoId: filename,
       });
 
-      // Poll for processing completion
+      // Poll for processing status using the new status endpoint
       const pollInterval = setInterval(async () => {
         try {
-          const checkResponse = await apiClient.get(
-            `/videos/${filename}/hls.m3u8`
-          );
-          if (checkResponse.status === 200) {
+          const statusResponse = await api.videos.videosControllerGetVideoStatus(filename);
+          const status = statusResponse.data; // Now properly typed as VideoStatusResponseDto
+          
+          if (status.status === 'ready') {
             clearInterval(pollInterval);
             setUploadStatus({
               status: 'completed',
-              message: 'Video processed successfully!',
+              message: 'Video processed successfully! Ready for streaming.',
               videoId: filename,
             });
             onVideoUploaded?.(filename);
+          } else if (status.status === 'error') {
+            clearInterval(pollInterval);
+            setUploadStatus({
+              status: 'error',
+              message: status.error || status.message || 'Processing failed',
+            });
+          } else if (status.availableForStreaming) {
+            // Update message if streaming is available while still processing
+            setUploadStatus({
+              status: 'processing',
+              message: `Ready for streaming! Processing additional qualities... (${status.progress}%)`,
+              videoId: filename,
+            });
+            onVideoUploaded?.(filename); // Notify that streaming is available
+          } else {
+            // Still processing
+            setUploadStatus({
+              status: 'processing',
+              message: `Processing video... ${status.message} (${status.progress}%)`,
+              videoId: filename,
+            });
           }
         } catch (error) {
-          // Still processing, continue polling
+          // Continue polling on error - might be network issue
+          console.error('Error checking video status:', error);
         }
       }, 3000);
 
-      // Stop polling after 5 minutes
+      // Stop polling after 10 minutes (increased for large files)
       setTimeout(() => {
         clearInterval(pollInterval);
         if (uploadStatus.status === 'processing') {
           setUploadStatus({
             status: 'error',
-            message: 'Processing timeout. Please try again.',
+            message: 'Processing timeout. Large files may take longer.',
           });
         }
-      }, 300000);
+      }, 600000);
     } catch (error: any) {
       setUploadStatus({
         status: 'error',

@@ -16,6 +16,15 @@ interface VideoItem {
   filename: string;
   status: 'processing' | 'ready' | 'error';
   createdAt?: string;
+  availableQualities?: string[];
+  hasMasterPlaylist?: boolean;
+  enhancedStatus?: {
+    status: string;
+    progress?: number;
+    message?: string;
+    metadata?: any;
+    availableForStreaming?: boolean;
+  };
 }
 
 interface VideoListProps {
@@ -48,6 +57,9 @@ export const VideoList: React.FC<VideoListProps> = ({
             ? 'processing'
             : 'error',
         createdAt: video.createdAt,
+        availableQualities: video.availableQualities || [],
+        hasMasterPlaylist: video.hasMasterPlaylist || false,
+        enhancedStatus: video.enhancedStatus || null,
       }));
 
       setVideos(formattedVideos);
@@ -103,11 +115,20 @@ export const VideoList: React.FC<VideoListProps> = ({
     }
   };
 
-  const getStatusText = (status: string) => {
+  const getStatusText = (status: string, video: VideoItem) => {
     switch (status) {
       case 'ready':
+        if (video.enhancedStatus?.availableForStreaming) {
+          const qualities = video.availableQualities || [];
+          if (qualities.length > 0) {
+            return `Ready (${qualities.join(', ')})`;
+          }
+        }
         return 'Ready to stream';
       case 'processing':
+        if (video.enhancedStatus?.availableForStreaming) {
+          return 'Streaming available - processing more qualities...';
+        }
         return 'Processing...';
       case 'error':
         return 'Error';
@@ -164,9 +185,22 @@ export const VideoList: React.FC<VideoListProps> = ({
                     </div>
                     <div>
                       <p className="font-medium text-sm">{video.filename}</p>
-                      <p className={`text-xs ${getStatusColor(video.status)}`}>
-                        {getStatusText(video.status)}
-                      </p>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className={getStatusColor(video.status)}>
+                          {getStatusText(video.status, video)}
+                        </span>
+                        {video.enhancedStatus?.progress && (
+                          <span className="text-muted-foreground">
+                            ({video.enhancedStatus.progress}%)
+                          </span>
+                        )}
+                        {video.availableQualities &&
+                          video.availableQualities.length > 0 && (
+                            <span className="text-muted-foreground">
+                              • {video.availableQualities.join(', ')}
+                            </span>
+                          )}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -174,11 +208,18 @@ export const VideoList: React.FC<VideoListProps> = ({
                       variant="ghost"
                       size="sm"
                       onClick={() => handleVideoSelect(video.id)}
-                      disabled={video.status !== 'ready'}
+                      disabled={
+                        video.status === 'error' ||
+                        (!video.enhancedStatus?.availableForStreaming &&
+                          video.status !== 'ready')
+                      }
                       className="flex items-center gap-1"
                     >
                       <Play className="h-3 w-3" />
-                      Play
+                      {video.enhancedStatus?.availableForStreaming &&
+                      video.status === 'processing'
+                        ? 'Stream'
+                        : 'Play'}
                     </Button>
                     <Button
                       variant="ghost"

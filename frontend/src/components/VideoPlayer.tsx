@@ -23,10 +23,39 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, title }) => {
   const [duration, setDuration] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [videoStatus, setVideoStatus] = useState<any>(null);
 
   const hlsUrl = `${
     import.meta.env.VITE_API_URL || 'http://localhost:3000'
+  }/videos/${videoId}/master.m3u8`;
+
+  const fallbackHlsUrl = `${
+    import.meta.env.VITE_API_URL || 'http://localhost:3000'
   }/videos/${videoId}/hls.m3u8`;
+
+  // Fetch video status to show processing info
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        const response = await fetch(
+          `${
+            import.meta.env.VITE_API_URL || 'http://localhost:3000'
+          }/videos/${videoId}/status`
+        );
+        if (response.ok) {
+          const status = await response.json();
+          setVideoStatus(status);
+        }
+      } catch (err) {
+        console.error('Failed to fetch video status:', err);
+      }
+    };
+
+    fetchStatus();
+    // Poll for status updates if still processing
+    const interval = setInterval(fetchStatus, 5000);
+    return () => clearInterval(interval);
+  }, [videoId]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -70,13 +99,18 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, title }) => {
       hls.on(Hls.Events.ERROR, (event, data) => {
         console.error('HLS error:', data);
         if (data.fatal) {
-          setError(`HLS Error: ${data.details || 'Unknown error'}`);
-          setIsLoading(false);
+          console.log('Trying fallback HLS URL...');
+          // Try fallback URL
+          hls?.loadSource(fallbackHlsUrl);
         }
       });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      // Native HLS support (Safari)
+      // Native HLS support (Safari) - try master playlist first
       video.src = hlsUrl;
+      video.onerror = () => {
+        console.log('Master playlist failed, trying fallback...');
+        video.src = fallbackHlsUrl;
+      };
     } else {
       setError('HLS playback not supported in this browser');
       setIsLoading(false);
@@ -150,7 +184,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, title }) => {
           <Play className="h-5 w-5" />
           {title || `Video Player - ${videoId}`}
         </CardTitle>
-        <CardDescription>Streaming transposed video with HLS</CardDescription>
+        <CardDescription>
+          Multi-quality adaptive streaming with HLS
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="relative bg-black rounded-lg overflow-hidden">
@@ -237,9 +273,19 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, title }) => {
         </div>
 
         <div className="text-xs text-muted-foreground space-y-1">
+          <p>• Adaptive bitrate streaming (360p-1080p)</p>
+          <p>• Automatic quality switching based on bandwidth</p>
           <p>• Video is transposed 90° clockwise during processing</p>
-          <p>• Streaming via HLS (HTTP Live Streaming)</p>
-          <p>• Segmented for adaptive bitrate streaming</p>
+          {videoStatus?.availableForStreaming &&
+            videoStatus?.status === 'ready' &&
+            videoStatus?.progress < 100 && (
+              <p className="text-blue-600">
+                • Additional qualities being processed ({videoStatus.progress}%)
+              </p>
+            )}
+          {videoStatus?.qualities && videoStatus.qualities.length > 0 && (
+            <p>• Available: {videoStatus.qualities.join(', ')}</p>
+          )}
         </div>
       </CardContent>
     </Card>
