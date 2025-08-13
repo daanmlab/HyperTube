@@ -10,5 +10,6 @@
     "emitDecoratorMetadata": true,
     "strictPropertyInitialization": false,
     "skipLibCheck": true
-  }
+  },
+  "exclude": ["node_modules", "dist", "videos"]
 }

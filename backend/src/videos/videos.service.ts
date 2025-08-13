@@ -26,6 +26,52 @@ export class VideosService {
     return { filename: file.filename, path: file.path, status: 'processing' };
   }
 
+  async listVideos() {
+    try {
+      const files = fs.readdirSync(this.videosDir);
+      const videos = files
+        .filter(file => !file.includes('.'))
+        .map(videoId => {
+          const hlsDir = path.join(this.videosDir, videoId + '_hls');
+          const playlistPath = path.join(hlsDir, 'output.m3u8');
+          const originalPath = path.join(this.videosDir, videoId);
+
+          let status = 'error';
+          let fileSize = 0;
+
+          if (fs.existsSync(playlistPath)) {
+            status = 'ready';
+          } else if (fs.existsSync(originalPath)) {
+            status = 'processing';
+          }
+
+          try {
+            if (fs.existsSync(originalPath)) {
+              fileSize = fs.statSync(originalPath).size;
+            }
+          } catch (e) {
+            // Ignore stat errors
+          }
+
+          return {
+            id: videoId,
+            filename: videoId,
+            status,
+            fileSize,
+            hasHls: fs.existsSync(playlistPath),
+            createdAt: fs.existsSync(originalPath)
+              ? fs.statSync(originalPath).birthtime.toISOString()
+              : new Date().toISOString(),
+          };
+        });
+
+      return videos;
+    } catch (error) {
+      console.error('Error listing videos:', error);
+      return [];
+    }
+  }
+
   async getHlsPlaylist(videoId: string, res: Response) {
     const playlistPath = path.join(
       this.videosDir,

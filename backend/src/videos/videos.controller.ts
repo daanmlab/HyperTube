@@ -17,6 +17,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import type { Response } from 'express';
+import { Public } from '../auth/decorators/public.decorator';
 import { VideosService } from './videos.service';
 
 @ApiTags('Videos')
@@ -51,6 +52,17 @@ export class VideosController {
     return this.videosService.handleUpload(file);
   }
 
+  @Get()
+  @ApiOperation({ summary: 'List all uploaded videos' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns list of all videos with their processing status.',
+  })
+  async listVideos() {
+    return this.videosService.listVideos();
+  }
+
+  @Public()
   @Get(':videoId/hls.m3u8')
   @ApiOperation({ summary: 'Get HLS playlist for processed video' })
   @ApiParam({ name: 'videoId', type: 'string' })
@@ -65,6 +77,7 @@ export class VideosController {
     return this.videosService.getHlsPlaylist(videoId, res);
   }
 
+  @Public()
   @Get(':videoId/:segment')
   @ApiOperation({ summary: 'Get HLS segment for processed video' })
   @ApiParam({ name: 'videoId', type: 'string' })
