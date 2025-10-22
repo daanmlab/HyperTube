@@ -6,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { MovieList } from '@/components/MovieList';
 import { VideoList } from '@/components/VideoList';
 import { VideoUpload } from '@/components/VideoUpload';
 import { useAuth } from '@/contexts/AuthContext';
@@ -98,7 +99,19 @@ export const Dashboard: React.FC = () => {
 
         <Card className="mt-8">
           <CardHeader>
-            <CardTitle>🎬 Video Test Setup</CardTitle>
+            <CardTitle>🎬 HyperTube Movies</CardTitle>
+            <CardDescription>
+              Stream movies from torrents with adaptive quality
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <MovieList refreshTrigger={refreshTrigger} />
+          </CardContent>
+        </Card>
+
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle>🎬 Video Test Setup (Legacy)</CardTitle>
             <CardDescription>
               Upload and test video transcoding and streaming functionality
             </CardDescription>

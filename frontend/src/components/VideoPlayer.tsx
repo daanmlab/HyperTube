@@ -15,9 +15,10 @@ import React, { useEffect, useRef, useState } from 'react';
 interface VideoPlayerProps {
   videoId: string;
   title?: string;
+  isMovie?: boolean;
 }
 
-export const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, title }) => {
+export const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, title, isMovie = false }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -29,9 +30,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, title }) => {
     null
   );
 
-  const hlsUrl = `${
-    import.meta.env.VITE_API_URL || 'http://localhost:3000'
-  }/videos/${videoId}/master.m3u8`;
+  const hlsUrl = isMovie 
+    ? `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/movies/${videoId}/master.m3u8`
+    : `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/videos/${videoId}/master.m3u8`;
 
   useEffect(() => {
     const fetchStatus = async () => {

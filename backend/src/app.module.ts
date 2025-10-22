@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { AppDataSource } from './data-source';
+import { MoviesModule } from './movies/movies.module';
 import { UsersModule } from './users/users.module';
 import { VideosModule } from './videos/videos.module';
 
@@ -14,6 +15,7 @@ import { VideosModule } from './videos/videos.module';
     AuthModule,
     UsersModule,
     VideosModule,
+    MoviesModule,
   ],
   controllers: [AppController],
   providers: [

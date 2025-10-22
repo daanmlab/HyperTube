@@ -1,5 +1,5 @@
 import { DataSource } from 'typeorm';
-import { User } from './entities/user.entity';
+import { Movie, User } from './entities';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -8,7 +8,7 @@ export const AppDataSource = new DataSource({
   username: process.env.POSTGRES_USER || 'postgres',
   password: process.env.POSTGRES_PASSWORD || 'postgres',
   database: process.env.POSTGRES_DB || 'hypertube',
-  entities: [User],
+  entities: [User, Movie],
   migrations: [__dirname + '/migrations/*{.ts,.js}'],
   synchronize: false,
   logging: process.env.NODE_ENV === 'development',

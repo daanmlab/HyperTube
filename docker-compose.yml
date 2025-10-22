@@ -26,6 +26,10 @@ services:
       - '5173:5173'
     env_file: .env
     volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/vite.config.mts:/app/vite.config.mts
+      - ./frontend/tsconfig.json:/app/tsconfig.json
       - /app/node_modules
     depends_on:
       - api
@@ -51,9 +55,11 @@ services:
     volumes:
       - /app/node_modules
       - videos:/app/videos
+      - ./downloads:/downloads
     depends_on:
       - db
       - redis
+      - aria2
     develop:
       watch:
         - action: sync
@@ -76,6 +82,28 @@ services:
     image: redis:8-alpine
     ports:
       - '6379:6379'
+  aria2:
+    image: p3terx/aria2-pro
+    container_name: aria2
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - RPC_SECRET=superlongrandomtoken
+      - RPC_PORT=6800
+      - LISTEN_PORT=6888
+      - DISK_CACHE=64M
+      - IPV6_MODE=false
+      - UPDATE_TRACKERS=true
+      - CUSTOM_TRACKER_URL=
+      - TZ=UTC
+    ports:
+      - '6800:6800'
+      - '6888:6888'
+      - '6888:6888/udp'
+    volumes:
+      - ./downloads:/downloads
+      - ./torrent_downloads:/downloads/torrents
   nginx:
     image: nginx:1.25-alpine
     ports:
