@@ -17,3 +17,11 @@ pnpm-debug.log*
 # misc
 .DS_Store
 
+# runtime directories
+downloads/
+torrent_downloads/
+
+# backup directories
+backend/backup/
+*.container
+
