@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import Redis from 'ioredis';
 import * as path from 'path';
 import { promisify } from 'util';
+import { MovieDownloadMonitor } from './movie-monitor';
 
 const execAsync = promisify(exec);
 
@@ -410,6 +411,19 @@ class VideoTranscoder {
 }
 
 // Main worker loop
+let monitor: MovieDownloadMonitor | null = null;
+
+async function shutdown() {
+  console.log('[WORKER] Shutting down gracefully...');
+  if (monitor) {
+    monitor.stopMonitoring();
+  }
+  process.exit(0);
+}
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
+
 async function main() {
   const redis = new Redis({
     host: process.env.REDIS_HOST || 'redis',
@@ -417,8 +431,13 @@ async function main() {
   });
 
   const transcoder = new VideoTranscoder();
+  monitor = new MovieDownloadMonitor();
 
   console.log('[WORKER] Video transcoding worker started');
+  
+  // Start download monitoring
+  monitor.startMonitoring();
+  console.log('[WORKER] Movie download monitor started');
 
   // Health check
   setInterval(async () => {
@@ -460,17 +479,6 @@ async function main() {
     }
   }
 }
-
-// Handle graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('[WORKER] Received SIGTERM, shutting down gracefully...');
-  process.exit(0);
-});
-
-process.on('SIGINT', () => {
-  console.log('[WORKER] Received SIGINT, shutting down gracefully...');
-  process.exit(0);
-});
 
 main().catch(error => {
   console.error('[WORKER] Fatal error:', error);

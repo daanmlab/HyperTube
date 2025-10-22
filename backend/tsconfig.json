@@ -11,5 +11,5 @@
     "strictPropertyInitialization": false,
     "skipLibCheck": true
   },
-  "exclude": ["node_modules", "dist", "videos"]
+  "exclude": ["node_modules", "dist", "videos", "backup"]
 }
