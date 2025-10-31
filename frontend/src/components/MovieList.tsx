@@ -1,4 +1,5 @@
 import { apiClient } from '@/api/client';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -7,8 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Play, RefreshCw, Film, Search } from 'lucide-react';
+import { Film, Play, RefreshCw, Search } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -51,7 +51,7 @@ export const MovieList: React.FC = () => {
 
   useEffect(() => {
     loadMovies();
-    
+
     // Auto-refresh every 5 seconds to update progress
     const interval = setInterval(loadMovies, 5000);
     return () => clearInterval(interval);
@@ -86,7 +86,9 @@ export const MovieList: React.FC = () => {
         const quality = movie.selectedQuality || '';
         return `Transcoding ${quality ? quality + ' - ' : ''}${progress}%`;
       case 'downloading':
-        const downloadProgress = parseFloat(movie.downloadProgress || '0').toFixed(0);
+        const downloadProgress = parseFloat(
+          movie.downloadProgress || '0'
+        ).toFixed(0);
         return `Downloading ${downloadProgress}%`;
       case 'error':
         return 'Error';
@@ -96,8 +98,11 @@ export const MovieList: React.FC = () => {
   };
 
   const isPlayable = (movie: Movie) => {
-    return movie.status === 'ready' || 
-           (movie.status === 'transcoding' && parseFloat(movie.transcodeProgress) > 0);
+    return (
+      movie.status === 'ready' ||
+      (movie.status === 'transcoding' &&
+        parseFloat(movie.transcodeProgress) > 0)
+    );
   };
 
   return (
@@ -132,9 +137,13 @@ export const MovieList: React.FC = () => {
           {movies.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Film className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="text-lg font-medium mb-2">No movies in your library yet</p>
-              <p className="text-sm mb-4">Search and download movies to get started</p>
-              <Button 
+              <p className="text-lg font-medium mb-2">
+                No movies in your library yet
+              </p>
+              <p className="text-sm mb-4">
+                Search and download movies to get started
+              </p>
+              <Button
                 onClick={() => navigate('/search')}
                 className="flex items-center gap-2 mx-auto"
               >
@@ -182,7 +191,8 @@ export const MovieList: React.FC = () => {
                     <div className="text-xs text-muted-foreground mb-3">
                       {getStatusText(movie)}
                     </div>
-                    {(movie.status === 'downloading' || movie.status === 'transcoding') && (
+                    {(movie.status === 'downloading' ||
+                      movie.status === 'transcoding') && (
                       <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
                         <div
                           className="bg-blue-600 h-2 rounded-full transition-all"

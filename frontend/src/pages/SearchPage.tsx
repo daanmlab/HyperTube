@@ -1,5 +1,5 @@
-import { Button } from '@/components/ui/button';
 import { MovieSearch } from '@/components/MovieSearch';
+import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, Search } from 'lucide-react';
 import React from 'react';

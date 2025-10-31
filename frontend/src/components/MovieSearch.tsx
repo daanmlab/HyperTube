@@ -1,4 +1,5 @@
 import { apiClient } from '@/api/client';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -7,8 +8,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -16,8 +15,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Download, Search, Star, Calendar, Clock, Film, Loader2, Play } from 'lucide-react';
-import React, { useState, useEffect } from 'react';
+import { Input } from '@/components/ui/input';
+import {
+  Calendar,
+  Clock,
+  Download,
+  Film,
+  Loader2,
+  Play,
+  Search,
+  Star,
+} from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 interface Torrent {
@@ -48,8 +57,12 @@ export const MovieSearch: React.FC = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [selectedMovie, setSelectedMovie] = useState<SearchMovie | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [downloadProgress, setDownloadProgress] = useState<{ [key: string]: boolean }>({});
-  const [libraryMovies, setLibraryMovies] = useState<{ [key: string]: any }>({});
+  const [downloadProgress, setDownloadProgress] = useState<{
+    [key: string]: boolean;
+  }>({});
+  const [libraryMovies, setLibraryMovies] = useState<{ [key: string]: any }>(
+    {}
+  );
   const navigate = useNavigate();
 
   // Load library movies to check which are already downloaded
@@ -68,7 +81,7 @@ export const MovieSearch: React.FC = () => {
       }
     };
     loadLibrary();
-    
+
     // Refresh library every 10 seconds
     const interval = setInterval(loadLibrary, 10000);
     return () => clearInterval(interval);
@@ -100,22 +113,32 @@ export const MovieSearch: React.FC = () => {
   const handleDownload = async (movie: SearchMovie, quality?: string) => {
     setIsDownloading(true);
     setDownloadProgress(prev => ({ ...prev, [movie.imdb_id]: true }));
-    
+
     try {
-      console.log(`Starting download for ${movie.title} (${movie.imdb_id}) with quality: ${quality || 'auto'}`);
-      
-      const response = await apiClient.post('/movies/start-download', {}, {
-        params: {
-          imdbId: movie.imdb_id,  // Backend expects 'imdbId' not 'imdb_id'
-          ...(quality && { quality }),  // Only include quality if provided
-        },
-      });
+      console.log(
+        `Starting download for ${movie.title} (${
+          movie.imdb_id
+        }) with quality: ${quality || 'auto'}`
+      );
+
+      const response = await apiClient.post(
+        '/movies/start-download',
+        {},
+        {
+          params: {
+            imdbId: movie.imdb_id, // Backend expects 'imdbId' not 'imdb_id'
+            ...(quality && { quality }), // Only include quality if provided
+          },
+        }
+      );
 
       if (response.data) {
         // Show success message
-        alert(`Download started for "${movie.title}"! Check your library for progress.`);
+        alert(
+          `Download started for "${movie.title}"! Check your library for progress.`
+        );
         setSelectedMovie(null);
-        
+
         // Reload library immediately to show new movie
         const libResponse = await apiClient.get('/movies/library');
         const movies = libResponse.data || [];
@@ -124,7 +147,7 @@ export const MovieSearch: React.FC = () => {
           moviesMap[m.imdbId] = m;
         });
         setLibraryMovies(moviesMap);
-        
+
         // Navigate to dashboard after a short delay
         setTimeout(() => {
           navigate('/dashboard');
@@ -132,7 +155,10 @@ export const MovieSearch: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Download failed:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to start download';
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        'Failed to start download';
       alert(`Download failed: ${errorMessage}`);
     } finally {
       setIsDownloading(false);
@@ -171,12 +197,12 @@ export const MovieSearch: React.FC = () => {
               type="text"
               placeholder="Search for movies..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={e => setSearchQuery(e.target.value)}
               onKeyPress={handleKeyPress}
               className="flex-1"
             />
-            <Button 
-              onClick={handleSearch} 
+            <Button
+              onClick={handleSearch}
               disabled={isSearching || !searchQuery.trim()}
               className="flex items-center gap-2"
             >
@@ -201,9 +227,12 @@ export const MovieSearch: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {searchResults.map((movie) => (
-                <Card key={movie.imdb_id} className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow">
-                  <div 
+              {searchResults.map(movie => (
+                <Card
+                  key={movie.imdb_id}
+                  className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
+                >
+                  <div
                     className="aspect-[2/3] relative"
                     onClick={() => setSelectedMovie(movie)}
                   >
@@ -211,14 +240,18 @@ export const MovieSearch: React.FC = () => {
                       src={movie.image}
                       alt={movie.title}
                       className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.src = 'https://via.placeholder.com/300x450?text=No+Image';
+                      onError={e => {
+                        e.currentTarget.src =
+                          'https://via.placeholder.com/300x450?text=No+Image';
                       }}
                     />
                     {movie.torrents && movie.torrents.length > 0 && (
                       <div className="absolute top-2 right-2 flex flex-col gap-1">
                         {movie.torrents.slice(0, 3).map((torrent, idx) => (
-                          <Badge key={idx} className={getQualityColor(torrent.resolution)}>
+                          <Badge
+                            key={idx}
+                            className={getQualityColor(torrent.resolution)}
+                          >
                             {torrent.resolution}
                           </Badge>
                         ))}
@@ -263,33 +296,52 @@ export const MovieSearch: React.FC = () => {
                     <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
                       {movie.synopsis}
                     </p>
-                    
+
                     {libraryMovies[movie.imdb_id] ? (
                       <>
                         <div className="text-xs text-muted-foreground mb-2">
-                          {libraryMovies[movie.imdb_id].status === 'transcoding' ? (
+                          {libraryMovies[movie.imdb_id].status ===
+                          'transcoding' ? (
                             <>
-                              Transcoding {libraryMovies[movie.imdb_id].selectedQuality || ''} - {' '}
-                              {parseFloat(libraryMovies[movie.imdb_id].transcodeProgress || '0').toFixed(0)}%
+                              Transcoding{' '}
+                              {libraryMovies[movie.imdb_id].selectedQuality ||
+                                ''}{' '}
+                              -{' '}
+                              {parseFloat(
+                                libraryMovies[movie.imdb_id]
+                                  .transcodeProgress || '0'
+                              ).toFixed(0)}
+                              %
                             </>
-                          ) : libraryMovies[movie.imdb_id].status === 'downloading' ? (
+                          ) : libraryMovies[movie.imdb_id].status ===
+                            'downloading' ? (
                             <>
-                              Downloading - {parseFloat(libraryMovies[movie.imdb_id].downloadProgress || '0').toFixed(0)}%
+                              Downloading -{' '}
+                              {parseFloat(
+                                libraryMovies[movie.imdb_id].downloadProgress ||
+                                  '0'
+                              ).toFixed(0)}
+                              %
                             </>
                           ) : (
                             <>Status: {libraryMovies[movie.imdb_id].status}</>
                           )}
                         </div>
-                        {(libraryMovies[movie.imdb_id].status === 'downloading' || 
-                          libraryMovies[movie.imdb_id].status === 'transcoding') && (
+                        {(libraryMovies[movie.imdb_id].status ===
+                          'downloading' ||
+                          libraryMovies[movie.imdb_id].status ===
+                            'transcoding') && (
                           <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
                             <div
                               className="bg-blue-600 h-2 rounded-full transition-all"
                               style={{
                                 width: `${
-                                  libraryMovies[movie.imdb_id].status === 'downloading'
-                                    ? libraryMovies[movie.imdb_id].downloadProgress
-                                    : libraryMovies[movie.imdb_id].transcodeProgress
+                                  libraryMovies[movie.imdb_id].status ===
+                                  'downloading'
+                                    ? libraryMovies[movie.imdb_id]
+                                        .downloadProgress
+                                    : libraryMovies[movie.imdb_id]
+                                        .transcodeProgress
                                 }%`,
                               }}
                             />
@@ -298,17 +350,24 @@ export const MovieSearch: React.FC = () => {
                         <Button
                           className="w-full"
                           onClick={() => navigate(`/movie/${movie.imdb_id}`)}
-                          disabled={libraryMovies[movie.imdb_id].status !== 'ready'}
+                          disabled={
+                            libraryMovies[movie.imdb_id].status !== 'ready'
+                          }
                         >
                           <Play className="h-4 w-4 mr-2" />
-                          {libraryMovies[movie.imdb_id].status === 'ready' ? 'Stream' : 'Processing...'}
+                          {libraryMovies[movie.imdb_id].status === 'ready'
+                            ? 'Stream'
+                            : 'Processing...'}
                         </Button>
                       </>
                     ) : (
                       <Button
                         className="w-full"
                         onClick={() => setSelectedMovie(movie)}
-                        disabled={downloadProgress[movie.imdb_id] || !movie.torrents?.length}
+                        disabled={
+                          downloadProgress[movie.imdb_id] ||
+                          !movie.torrents?.length
+                        }
                       >
                         {downloadProgress[movie.imdb_id] ? (
                           <>
@@ -332,29 +391,35 @@ export const MovieSearch: React.FC = () => {
       )}
 
       {/* Movie Details Dialog */}
-      <Dialog open={selectedMovie !== null} onOpenChange={() => setSelectedMovie(null)}>
+      <Dialog
+        open={selectedMovie !== null}
+        onOpenChange={() => setSelectedMovie(null)}
+      >
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           {selectedMovie && (
             <>
               <DialogHeader>
-                <DialogTitle className="text-2xl">{selectedMovie.title}</DialogTitle>
+                <DialogTitle className="text-2xl">
+                  {selectedMovie.title}
+                </DialogTitle>
                 <DialogDescription>
                   Select quality to download and stream
                 </DialogDescription>
               </DialogHeader>
-              
+
               <div className="grid gap-6 md:grid-cols-2">
                 <div>
                   <img
                     src={selectedMovie.image}
                     alt={selectedMovie.title}
                     className="w-full rounded-lg"
-                    onError={(e) => {
-                      e.currentTarget.src = 'https://via.placeholder.com/300x450?text=No+Image';
+                    onError={e => {
+                      e.currentTarget.src =
+                        'https://via.placeholder.com/300x450?text=No+Image';
                     }}
                   />
                 </div>
-                
+
                 <div className="space-y-4">
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
                     <span className="flex items-center gap-1">
@@ -392,47 +457,63 @@ export const MovieSearch: React.FC = () => {
                     </div>
                   )}
 
-                  {selectedMovie.torrents && selectedMovie.torrents.length > 0 && (
-                    <div>
-                      <h3 className="font-semibold mb-2">Available Qualities</h3>
-                      <div className="space-y-2">
-                        {selectedMovie.torrents.map((torrent, idx) => (
-                          <Card key={idx} className="p-3">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <Badge className={getQualityColor(torrent.resolution)}>
-                                  {torrent.resolution}
-                                </Badge>
-                                <div className="text-sm">
-                                  <div className="font-medium">{torrent.quality}</div>
-                                  <div className="text-muted-foreground">
-                                    {torrent.size} • {torrent.seeds} seeds
+                  {selectedMovie.torrents &&
+                    selectedMovie.torrents.length > 0 && (
+                      <div>
+                        <h3 className="font-semibold mb-2">
+                          Available Qualities
+                        </h3>
+                        <div className="space-y-2">
+                          {selectedMovie.torrents.map((torrent, idx) => (
+                            <Card key={idx} className="p-3">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <Badge
+                                    className={getQualityColor(
+                                      torrent.resolution
+                                    )}
+                                  >
+                                    {torrent.resolution}
+                                  </Badge>
+                                  <div className="text-sm">
+                                    <div className="font-medium">
+                                      {torrent.quality}
+                                    </div>
+                                    <div className="text-muted-foreground">
+                                      {torrent.size} • {torrent.seeds} seeds
+                                    </div>
                                   </div>
                                 </div>
+                                <Button
+                                  size="sm"
+                                  onClick={() =>
+                                    handleDownload(
+                                      selectedMovie,
+                                      torrent.resolution
+                                    )
+                                  }
+                                  disabled={isDownloading}
+                                >
+                                  {isDownloading ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Download className="h-4 w-4" />
+                                  )}
+                                </Button>
                               </div>
-                              <Button
-                                size="sm"
-                                onClick={() => handleDownload(selectedMovie, torrent.resolution)}
-                                disabled={isDownloading}
-                              >
-                                {isDownloading ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <Download className="h-4 w-4" />
-                                )}
-                              </Button>
-                            </div>
-                          </Card>
-                        ))}
+                            </Card>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {selectedMovie.trailer && (
                     <Button
                       variant="outline"
                       className="w-full"
-                      onClick={() => window.open(selectedMovie.trailer, '_blank')}
+                      onClick={() =>
+                        window.open(selectedMovie.trailer, '_blank')
+                      }
                     >
                       <Film className="h-4 w-4 mr-2" />
                       Watch Trailer

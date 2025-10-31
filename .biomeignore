@@ -1,0 +1,9 @@
+node_modules
+dist
+build
+coverage
+downloads
+torrent_downloads
+*.log
+.env
+.DS_Store

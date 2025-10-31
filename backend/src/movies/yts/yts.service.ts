@@ -52,14 +52,15 @@ export class YtsService {
     trailer: movie.yt_trailer_code
       ? `https://www.youtube.com/watch?v=${movie.yt_trailer_code}`
       : undefined,
-    torrents: movie.torrents?.map(t => ({
-      resolution: t.quality,
-      quality: t.quality,
-      size: this.formatBytes(t.size_bytes),
-      seeds: t.seeds || 0,
-      peers: t.peers || 0,
-      magnet: this.buildMagnet(t.hash, movie.title),
-    })) || [],
+    torrents:
+      movie.torrents?.map(t => ({
+        resolution: t.quality,
+        quality: t.quality,
+        size: this.formatBytes(t.size_bytes),
+        seeds: t.seeds || 0,
+        peers: t.peers || 0,
+        magnet: this.buildMagnet(t.hash, movie.title),
+      })) || [],
   });
 
   private formatBytes(bytes: number): string {
@@ -67,7 +68,7 @@ export class YtsService {
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
   }
 
   private buildMagnet = (hash: string, title: string) =>
@@ -92,17 +93,20 @@ export class YtsService {
       };
       console.log('YTS search params:', params);
       console.log('YTS search URL:', `${BASE_URL}/list_movies.json`);
-      
+
       const { data } = await lastValueFrom(
-        this.http.get(`${BASE_URL}/list_movies.json`, { 
+        this.http.get(`${BASE_URL}/list_movies.json`, {
           params,
           timeout: 10000,
         })
       );
-      
+
       console.log('YTS search response status:', data?.status);
-      console.log('YTS search response data:', JSON.stringify(data).substring(0, 500));
-      
+      console.log(
+        'YTS search response data:',
+        JSON.stringify(data).substring(0, 500)
+      );
+
       const movies: YtsMovie[] | undefined = data?.data?.movies;
       if (!movies) {
         console.log('No movies found in response');

@@ -5,7 +5,12 @@ import { AuthPage } from '@/pages/AuthPage';
 import { Dashboard } from '@/pages/Dashboard';
 import { MovieDetailsPage } from '@/pages/MovieDetailsPage';
 import { SearchPage } from '@/pages/SearchPage';
-import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
+import {
+  Navigate,
+  Route,
+  BrowserRouter as Router,
+  Routes,
+} from 'react-router-dom';
 import './index.css';
 
 export default function App() {
@@ -15,29 +20,29 @@ export default function App() {
         <Routes>
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
-          <Route 
-            path="/dashboard" 
+          <Route
+            path="/dashboard"
             element={
               <ProtectedRoute>
                 <Dashboard />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/search" 
+          <Route
+            path="/search"
             element={
               <ProtectedRoute>
                 <SearchPage />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/movie/:imdbId" 
+          <Route
+            path="/movie/:imdbId"
             element={
               <ProtectedRoute>
                 <MovieDetailsPage />
               </ProtectedRoute>
-            } 
+            }
           />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>

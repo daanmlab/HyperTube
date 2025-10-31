@@ -95,13 +95,13 @@ export class MoviesController {
   ): Promise<SearchResponseDto> {
     const pageNumber = parseInt(page, 10) || 1;
     let data = await this.ytsService.search(keywords, pageNumber);
-    
+
     // If YTS returns null (blocked/error), return empty array
     if (data === null) {
       console.log('YTS blocked or failed, returning empty results');
       data = [];
     }
-    
+
     return { data };
   }
   @Get('details')
@@ -285,64 +285,84 @@ export class MoviesController {
     const fs = require('fs');
     const path = require('path');
     const { execSync } = require('child_process');
-    
+
     return movies.map(movie => {
       let transcodeProgress = movie.transcodeProgress?.toString() || '0';
-      
+
       // Calculate accurate progress for transcoding movies
       if (movie.status === 'transcoding') {
         try {
           const hlsDir = path.join('/app/videos', `${movie.imdbId}_hls`);
-          
+
           if (fs.existsSync(hlsDir)) {
             const qualities = ['480p', '720p'];
             let totalProgress = 0;
-            
+
             for (let i = 0; i < qualities.length; i++) {
               const quality = qualities[i];
               const pattern = path.join(hlsDir, `output_${quality}_*.ts`);
-              
+
               try {
                 const result = execSync(`ls -1 ${pattern} 2>/dev/null | wc -l`);
                 const segmentCount = result.toString().trim();
                 const currentSegments = parseInt(segmentCount) || 0;
-                
-                console.log(`[PROGRESS] ${movie.imdbId} - ${quality}: ${currentSegments} segments`);
-                
+
+                console.log(
+                  `[PROGRESS] ${movie.imdbId} - ${quality}: ${currentSegments} segments`
+                );
+
                 if (currentSegments > 0) {
                   const expectedSegments = 2889; // ~3hr video with 4s segments
                   const qualityWeight = 50;
-                  const qualityProgress = Math.min(100, (currentSegments / expectedSegments) * 100);
-                  const weightedProgress = (qualityProgress * qualityWeight) / 100;
-                  
-                  console.log(`[PROGRESS] ${movie.imdbId} - ${quality}: ${currentSegments}/${expectedSegments} = ${qualityProgress.toFixed(1)}% -> weighted: ${weightedProgress.toFixed(1)}%`);
-                  
+                  const qualityProgress = Math.min(
+                    100,
+                    (currentSegments / expectedSegments) * 100
+                  );
+                  const weightedProgress =
+                    (qualityProgress * qualityWeight) / 100;
+
+                  console.log(
+                    `[PROGRESS] ${
+                      movie.imdbId
+                    } - ${quality}: ${currentSegments}/${expectedSegments} = ${qualityProgress.toFixed(
+                      1
+                    )}% -> weighted: ${weightedProgress.toFixed(1)}%`
+                  );
+
                   totalProgress += weightedProgress;
-                  
+
                   if (qualityProgress < 100) {
                     break;
                   }
                 }
               } catch (err) {
                 const error = err as Error;
-                console.error(`[PROGRESS] Error counting segments for ${quality}:`, error.message);
+                console.error(
+                  `[PROGRESS] Error counting segments for ${quality}:`,
+                  error.message
+                );
               }
             }
-            
+
             if (totalProgress > 0) {
               transcodeProgress = Math.round(totalProgress).toString();
-              console.log(`[PROGRESS] ${movie.imdbId} - Final progress: ${transcodeProgress}%`);
+              console.log(
+                `[PROGRESS] ${movie.imdbId} - Final progress: ${transcodeProgress}%`
+              );
             }
           } else {
             console.log(`[PROGRESS] HLS dir not found: ${hlsDir}`);
           }
         } catch (error) {
           const err = error as Error;
-          console.error(`[PROGRESS] Error calculating progress for ${movie.imdbId}:`, err.message);
+          console.error(
+            `[PROGRESS] Error calculating progress for ${movie.imdbId}:`,
+            err.message
+          );
           // Fall back to database value
         }
       }
-      
+
       return {
         imdbId: movie.imdbId,
         title: movie.title,
@@ -424,45 +444,53 @@ export class MoviesController {
     if (!movie) {
       throw new HttpException('Movie not found', HttpStatus.NOT_FOUND);
     }
-    
+
     // If transcoding, calculate actual progress based on segment files
     if (movie.status === 'transcoding' && movie.videoPath) {
       try {
         const fs = require('fs');
         const path = require('path');
-        
+
         // Determine HLS directory
         const hlsDir = path.join('/app/videos', `${imdbId}_hls`);
-        
+
         if (fs.existsSync(hlsDir)) {
           // Count segments for the current quality being transcoded
           // Assume 480p for first quality, 720p for second
           const qualities = ['480p', '720p'];
           let totalProgress = 0;
           let currentQuality = '';
-          
+
           for (let i = 0; i < qualities.length; i++) {
             const quality = qualities[i];
             const pattern = path.join(hlsDir, `output_${quality}_*.ts`);
-            
+
             try {
               const { execSync } = require('child_process');
-              const segmentCount = execSync(`ls -1 ${pattern} 2>/dev/null | wc -l`).toString().trim();
+              const segmentCount = execSync(
+                `ls -1 ${pattern} 2>/dev/null | wc -l`
+              )
+                .toString()
+                .trim();
               const currentSegments = parseInt(segmentCount) || 0;
-              
+
               if (currentSegments > 0) {
                 // Get video metadata to calculate expected segments
                 const metadataPath = path.join(hlsDir, 'metadata.json');
                 let expectedSegments = 2889; // Default based on ~3hr video with 4s segments
-                
+
                 // Calculate progress for this quality (each quality gets 50% of total)
                 const qualityWeight = 50; // Each quality is 50% of total progress
-                const qualityProgress = Math.min(100, (currentSegments / expectedSegments) * 100);
-                const weightedProgress = (qualityProgress * qualityWeight) / 100;
-                
+                const qualityProgress = Math.min(
+                  100,
+                  (currentSegments / expectedSegments) * 100
+                );
+                const weightedProgress =
+                  (qualityProgress * qualityWeight) / 100;
+
                 totalProgress += weightedProgress;
                 currentQuality = quality;
-                
+
                 // If this quality isn't complete, stop checking further qualities
                 if (qualityProgress < 100) {
                   break;
@@ -472,7 +500,7 @@ export class MoviesController {
               console.error(`Error counting segments for ${quality}:`, err);
             }
           }
-          
+
           return {
             imdbId: movie.imdbId,
             status: movie.status,
@@ -485,14 +513,15 @@ export class MoviesController {
         console.error('Error calculating transcode progress:', error);
       }
     }
-    
+
     return {
       imdbId: movie.imdbId,
       status: movie.status,
       transcodeProgress: movie.transcodeProgress?.toString() || '0',
-      message: movie.status === 'transcoding' 
-        ? `Transcoding ${movie.selectedQuality}` 
-        : movie.status,
+      message:
+        movie.status === 'transcoding'
+          ? `Transcoding ${movie.selectedQuality}`
+          : movie.status,
     };
   }
 
