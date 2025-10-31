@@ -57,12 +57,15 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, title, isMovi
   const saveWatchProgress = async (watchedSeconds: number, totalSeconds: number) => {
     if (!isMovie) return;
     
+    console.log('Saving watch progress:', { watchedSeconds, totalSeconds, videoId });
+    
     try {
       await apiClient.post('/watch-history/progress', {
         imdbId: videoId,
         watchedSeconds: Math.floor(watchedSeconds),
         totalSeconds: Math.floor(totalSeconds),
       });
+      console.log('Watch progress saved successfully');
     } catch (err) {
       console.error('Failed to save watch progress:', err);
     }
@@ -105,11 +108,20 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, title, isMovi
       setCurrentTime(video.currentTime);
       
       // Save progress every 10 seconds for movies
-      if (isMovie && duration > 0) {
+      if (isMovie && video.duration > 0) {
         const now = Date.now();
-        if (now - lastSaveTimeRef.current >= 10000) {
+        
+        // Initialize on first call
+        if (lastSaveTimeRef.current === 0) {
           lastSaveTimeRef.current = now;
-          saveWatchProgress(video.currentTime, duration);
+        }
+        
+        const timeSinceLastSave = now - lastSaveTimeRef.current;
+        
+        if (timeSinceLastSave >= 10000) {
+          console.log('10 seconds elapsed, saving progress...');
+          lastSaveTimeRef.current = now;
+          saveWatchProgress(video.currentTime, video.duration);
         }
       }
     };
