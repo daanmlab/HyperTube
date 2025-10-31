@@ -12,7 +12,10 @@
     "migration:generate": "npm run typeorm -- migration:generate src/migrations/$npm_config_name -d src/data-source.ts",
     "migration:create": "npm run typeorm -- migration:create src/migrations/$npm_config_name",
     "migration:run": "npm run typeorm -- migration:run -d src/data-source.ts",
-    "migration:revert": "npm run typeorm -- migration:revert -d src/data-source.ts"
+    "migration:revert": "npm run typeorm -- migration:revert -d src/data-source.ts",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write ."
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
@@ -24,7 +27,7 @@
     "@nestjs/typeorm": "^11.0.0",
     "@types/passport-google-oauth20": "^2.0.16",
     "@types/passport-oauth2": "^1.8.0",
-    "axios": "^1.11.0",
+    "axios": "^1.12.2",
     "bcryptjs": "^2.4.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
@@ -41,6 +44,7 @@
     "typeorm": "^0.3.25"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.3.2",
     "@nestjs/cli": "^10.0.0",
     "@openapitools/openapi-generator-cli": "^2.21.4",
     "@types/bcryptjs": "^2.4.6",

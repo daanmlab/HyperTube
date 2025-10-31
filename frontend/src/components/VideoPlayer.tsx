@@ -1,4 +1,5 @@
 import { VideoStatusResponseDto } from '@/api/generated/models/video-status-response-dto';
+import { apiClient } from '@/api/client';
 import { api } from '@/api/service';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,9 +16,10 @@ import React, { useEffect, useRef, useState } from 'react';
 interface VideoPlayerProps {
   videoId: string;
   title?: string;
+  isMovie?: boolean;
 }
 
-export const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, title }) => {
+export const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, title, isMovie = false }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -28,10 +30,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, title }) => {
   const [videoStatus, setVideoStatus] = useState<VideoStatusResponseDto | null>(
     null
   );
+  const lastSaveTimeRef = useRef<number>(0);
 
-  const hlsUrl = `${
-    import.meta.env.VITE_API_URL || 'http://localhost:3000'
-  }/videos/${videoId}/master.m3u8`;
+  const hlsUrl = isMovie 
+    ? `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/movies/${videoId}/master.m3u8`
+    : `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/videos/${videoId}/master.m3u8`;
 
   useEffect(() => {
     const fetchStatus = async () => {
@@ -50,13 +53,79 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, title }) => {
     return () => clearInterval(interval);
   }, [videoId]);
 
+  // Save watch progress for movies
+  const saveWatchProgress = async (watchedSeconds: number, totalSeconds: number) => {
+    if (!isMovie) return;
+    
+    console.log('Saving watch progress:', { watchedSeconds, totalSeconds, videoId });
+    
+    try {
+      await apiClient.post('/watch-history/progress', {
+        imdbId: videoId,
+        watchedSeconds: Math.floor(watchedSeconds),
+        totalSeconds: Math.floor(totalSeconds),
+      });
+      console.log('Watch progress saved successfully');
+    } catch (err) {
+      console.error('Failed to save watch progress:', err);
+    }
+  };
+
+  // Load saved watch progress for movies
+  useEffect(() => {
+    if (!isMovie) return;
+
+    const loadWatchProgress = async () => {
+      try {
+        const response = await apiClient.get(`/watch-history/movie/${videoId}`);
+        if (response.data && response.data.watchedSeconds > 0 && !response.data.completed) {
+          const video = videoRef.current;
+          if (video && video.duration > 0) {
+            video.currentTime = response.data.watchedSeconds;
+          }
+        }
+      } catch (err) {
+        // No saved progress or error, start from beginning
+        console.log('No saved progress found');
+      }
+    };
+
+    // Load progress after video metadata is loaded
+    const video = videoRef.current;
+    if (video) {
+      video.addEventListener('loadedmetadata', loadWatchProgress);
+      return () => video.removeEventListener('loadedmetadata', loadWatchProgress);
+    }
+  }, [isMovie, videoId]);
+
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
     let hls: Hls | null = null;
 
-    const updateTime = () => setCurrentTime(video.currentTime);
+    const updateTime = () => {
+      setCurrentTime(video.currentTime);
+      
+      // Save progress every 10 seconds for movies
+      if (isMovie && video.duration > 0) {
+        const now = Date.now();
+        
+        // Initialize on first call
+        if (lastSaveTimeRef.current === 0) {
+          lastSaveTimeRef.current = now;
+        }
+        
+        const timeSinceLastSave = now - lastSaveTimeRef.current;
+        
+        if (timeSinceLastSave >= 10000) {
+          console.log('10 seconds elapsed, saving progress...');
+          lastSaveTimeRef.current = now;
+          saveWatchProgress(video.currentTime, video.duration);
+        }
+      }
+    };
+    
     const updateDuration = () => setDuration(video.duration);
     const handleLoadStart = () => setIsLoading(true);
     const handleCanPlay = () => setIsLoading(false);

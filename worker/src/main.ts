@@ -1,8 +1,10 @@
+import axios from 'axios';
 import { exec } from 'child_process';
 import * as fs from 'fs';
 import Redis from 'ioredis';
 import * as path from 'path';
 import { promisify } from 'util';
+import { MovieDownloadMonitor } from './movie-monitor';
 
 const execAsync = promisify(exec);
 
@@ -140,7 +142,10 @@ class VideoTranscoder {
     outputDir: string,
     quality: QualityLevel,
     options: any,
-    metadata: VideoMetadata
+    metadata: VideoMetadata,
+    videoId: string,
+    qualityIndex: number,
+    totalQualities: number
   ): Promise<boolean> {
     try {
       console.log(`[TRANSCODER] Transcoding ${quality.name}...`);
@@ -151,6 +156,9 @@ class VideoTranscoder {
       const scaleFilter = shouldScale
         ? `-vf scale=${quality.width}:${quality.height}:force_original_aspect_ratio=decrease:force_divisible_by=2`
         : '';
+
+      const segmentTime = options.segmentTime || 10;
+      const expectedSegments = Math.ceil(metadata.duration / segmentTime);
 
       const command = [
         'ffmpeg',
@@ -174,7 +182,7 @@ class VideoTranscoder {
         `${parseInt(quality.videoBitrate) * 2}k`,
         scaleFilter,
         '-hls_time',
-        options.segmentTime || 10,
+        segmentTime,
         '-hls_playlist_type',
         'vod',
         '-hls_segment_filename',
@@ -186,7 +194,57 @@ class VideoTranscoder {
         .filter(Boolean)
         .join(' ');
 
-      await execAsync(command);
+      // Start ffmpeg in background and monitor progress
+      const child = exec(command);
+
+      // Monitor segment creation for progress updates
+      const progressInterval = setInterval(async () => {
+        try {
+          const pattern = `${outputDir}/output${quality.suffix}_*.ts`;
+          const { stdout } = await execAsync(
+            `ls -1 ${pattern} 2>/dev/null | wc -l`
+          );
+          const currentSegments = parseInt(stdout.trim()) || 0;
+
+          if (currentSegments > 0 && expectedSegments > 0) {
+            // Calculate progress within this quality's portion (each quality gets equal weight)
+            const qualityProgressPortion = 70 / totalQualities; // 70% total for all qualities
+            const baseProgress = 10 + qualityIndex * qualityProgressPortion;
+            const currentQualityProgress =
+              (currentSegments / expectedSegments) * qualityProgressPortion;
+            const totalProgress = Math.min(
+              80,
+              Math.round(baseProgress + currentQualityProgress)
+            );
+
+            await this.updateStatus(videoId, {
+              status: 'processing',
+              progress: totalProgress,
+              message: `Transcoding ${quality.name}... (${currentSegments}/${expectedSegments} segments)`,
+              metadata,
+            });
+          }
+        } catch (err) {
+          // Ignore errors during progress check
+        }
+      }, 5000); // Check every 5 seconds
+
+      // Wait for ffmpeg to complete
+      await new Promise((resolve, reject) => {
+        child.on('exit', code => {
+          clearInterval(progressInterval);
+          if (code === 0) {
+            resolve(true);
+          } else {
+            reject(new Error(`ffmpeg exited with code ${code}`));
+          }
+        });
+        child.on('error', err => {
+          clearInterval(progressInterval);
+          reject(err);
+        });
+      });
+
       console.log(`[TRANSCODER] ${quality.name} transcoding complete`);
       return true;
     } catch (error) {
@@ -312,12 +370,11 @@ class VideoTranscoder {
       // Transcode each quality level
       for (let i = 0; i < qualities.length; i++) {
         const quality = qualities[i];
-        const progress = 10 + ((i + 1) / qualities.length) * 70; // 10-80% for transcoding
 
         await this.updateStatus(videoId, {
           status: 'processing',
-          progress,
-          message: `Transcoding ${quality.name}...`,
+          progress: 10 + (i / qualities.length) * 70,
+          message: `Starting ${quality.name} transcoding...`,
           metadata,
         });
 
@@ -326,7 +383,10 @@ class VideoTranscoder {
           outputDir,
           quality,
           options,
-          metadata
+          metadata,
+          videoId,
+          i,
+          qualities.length
         );
         if (success) {
           successfulQualities.push(quality);
@@ -410,6 +470,127 @@ class VideoTranscoder {
 }
 
 // Main worker loop
+let monitor: MovieDownloadMonitor | null = null;
+
+async function shutdown() {
+  console.log('[WORKER] Shutting down gracefully...');
+  if (monitor) {
+    monitor.stopMonitoring();
+  }
+  process.exit(0);
+}
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
+
+async function restartIncompleteTranscodingJobs() {
+  console.log('[WORKER] Checking for incomplete transcoding jobs...');
+
+  try {
+    const backendUrl = process.env.BACKEND_URL || 'http://api:3000';
+
+    // Fetch all movies from the library
+    const response = await axios.get(`${backendUrl}/movies/library`);
+    const movies = response.data || [];
+
+    // Find movies that are in transcoding status but not complete
+    const incompleteTranscodings = movies.filter(
+      (movie: any) =>
+        movie.status === 'transcoding' &&
+        movie.transcodeProgress !== undefined &&
+        parseFloat(movie.transcodeProgress) < 100
+    );
+
+    if (incompleteTranscodings.length === 0) {
+      console.log('[WORKER] No incomplete transcoding jobs found');
+      return;
+    }
+
+    console.log(
+      `[WORKER] Found ${incompleteTranscodings.length} incomplete transcoding job(s), restarting...`
+    );
+
+    for (const movie of incompleteTranscodings) {
+      try {
+        console.log(
+          `[WORKER] Restarting transcoding for: ${movie.title} (${movie.imdbId})`
+        );
+
+        // Reset transcode progress to 0
+        await axios.post(
+          `${backendUrl}/movies/update-transcode-progress`,
+          null,
+          {
+            params: {
+              imdbId: movie.imdbId,
+              progress: '0',
+            },
+          }
+        );
+
+        // Check if video file exists
+        if (movie.videoPath && fs.existsSync(movie.videoPath)) {
+          // Clean up old HLS segments before restarting
+          const hlsDir = path.join('/app/videos', `${movie.imdbId}_hls`);
+          if (fs.existsSync(hlsDir)) {
+            console.log(`[WORKER] Cleaning up old HLS segments in ${hlsDir}`);
+            try {
+              const files = fs.readdirSync(hlsDir);
+              for (const file of files) {
+                if (
+                  file.endsWith('.ts') ||
+                  file.endsWith('.m3u8') ||
+                  file.endsWith('.vtt')
+                ) {
+                  fs.unlinkSync(path.join(hlsDir, file));
+                }
+              }
+              console.log(`[WORKER] Cleaned up ${files.length} old files`);
+            } catch (cleanupError) {
+              console.error(
+                `[WORKER] Error cleaning up old segments:`,
+                cleanupError
+              );
+            }
+          }
+
+          // Trigger a re-transcode by updating status back to transcoding
+          await axios.post(`${backendUrl}/movies/update-progress`, null, {
+            params: {
+              imdbId: movie.imdbId,
+              status: 'transcoding',
+            },
+          });
+
+          console.log(`[WORKER] ✅ Restarted transcoding for ${movie.title}`);
+        } else {
+          console.log(
+            `[WORKER] ⚠️ Video file not found for ${movie.title}, setting status to error`
+          );
+          await axios.post(`${backendUrl}/movies/update-progress`, null, {
+            params: {
+              imdbId: movie.imdbId,
+              status: 'error',
+            },
+          });
+        }
+      } catch (error) {
+        console.error(
+          `[WORKER] Failed to restart transcoding for ${movie.title}:`,
+          error
+        );
+      }
+    }
+
+    console.log('[WORKER] Finished restarting incomplete transcoding jobs');
+  } catch (error) {
+    console.error(
+      '[WORKER] Error checking for incomplete transcoding jobs:',
+      error
+    );
+  }
+}
+
 async function main() {
   const redis = new Redis({
     host: process.env.REDIS_HOST || 'redis',
@@ -417,8 +598,16 @@ async function main() {
   });
 
   const transcoder = new VideoTranscoder();
+  monitor = new MovieDownloadMonitor();
 
   console.log('[WORKER] Video transcoding worker started');
+
+  // Restart incomplete transcoding jobs
+  await restartIncompleteTranscodingJobs();
+
+  // Start download monitoring
+  monitor.startMonitoring();
+  console.log('[WORKER] Movie download monitor started');
 
   // Health check
   setInterval(async () => {
@@ -460,17 +649,6 @@ async function main() {
     }
   }
 }
-
-// Handle graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('[WORKER] Received SIGTERM, shutting down gracefully...');
-  process.exit(0);
-});
-
-process.on('SIGINT', () => {
-  console.log('[WORKER] Received SIGINT, shutting down gracefully...');
-  process.exit(0);
-});
 
 main().catch(error => {
   console.error('[WORKER] Fatal error:', error);
