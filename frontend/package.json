@@ -8,6 +8,7 @@
     "generate:client": "cd ../backend && npm run generate:client"
   },
   "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-slot": "^1.2.3",
     "@tailwindcss/vite": "^4.1.11",
     "@types/hls.js": "^0.13.3",

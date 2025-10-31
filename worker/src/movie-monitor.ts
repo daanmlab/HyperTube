@@ -220,14 +220,23 @@ export class MovieDownloadMonitor {
       }
 
       // Check if movie is already being transcoded or ready
-      if (movie.status === 'transcoding' && parseInt(movie.transcodeProgress.toString()) > 0) {
-        console.log(`${movie.title} is already being transcoded (${movie.transcodeProgress}%), skipping...`);
+      // Note: We check activeTranscodings (which tracks actual running jobs) rather than just progress,
+      // because the progress value can come from existing segment files on disk even if no job is running
+      if (this.activeTranscodings.has(movie.imdbId)) {
+        console.log(`${movie.title} has an active transcoding job, skipping...`);
         return;
       }
 
       if (movie.status === 'ready') {
         console.log(`${movie.title} is already ready, skipping transcoding...`);
         return;
+      }
+      
+      // If status is transcoding but no active job exists, it might be stuck from a previous session
+      // In this case, we should restart it
+      if (movie.status === 'transcoding' && parseInt(movie.transcodeProgress.toString()) > 0 && parseInt(movie.transcodeProgress.toString()) < 100) {
+        console.log(`${movie.title} shows transcoding progress (${movie.transcodeProgress}%) but no active job - restarting transcoding...`);
+        // Continue to start transcoding
       }
 
       console.log(`Starting progressive transcoding for ${movie.title}`);

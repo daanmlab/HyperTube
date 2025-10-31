@@ -1,3 +1,4 @@
+import { MovieList } from '@/components/MovieList';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -6,15 +7,16 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { MovieList } from '@/components/MovieList';
 import { VideoList } from '@/components/VideoList';
 import { VideoUpload } from '@/components/VideoUpload';
 import { useAuth } from '@/contexts/AuthContext';
-import { Calendar, LogOut, Mail, User } from 'lucide-react';
+import { Calendar, LogOut, Mail, Search, User } from 'lucide-react';
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   if (!user) {
@@ -46,14 +48,23 @@ export const Dashboard: React.FC = () => {
               Here's your HyperTube dashboard
             </p>
           </div>
-          <Button
-            variant="outline"
-            onClick={logout}
-            className="flex items-center gap-2"
-          >
-            <LogOut className="h-4 w-4" />
-            Sign Out
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => navigate('/search')}
+              className="flex items-center gap-2"
+            >
+              <Search className="h-4 w-4" />
+              Search Movies
+            </Button>
+            <Button
+              variant="outline"
+              onClick={logout}
+              className="flex items-center gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              Sign Out
+            </Button>
+          </div>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -97,17 +108,7 @@ export const Dashboard: React.FC = () => {
           </Card>
         </div>
 
-        <Card className="mt-8">
-          <CardHeader>
-            <CardTitle>🎬 HyperTube Movies</CardTitle>
-            <CardDescription>
-              Stream movies from torrents with adaptive quality
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <MovieList refreshTrigger={refreshTrigger} />
-          </CardContent>
-        </Card>
+        <MovieList class="mt-1" refreshTrigger={refreshTrigger} />
 
         <Card className="mt-8">
           <CardHeader>

@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Play, RefreshCw, Film } from 'lucide-react';
+import { Play, RefreshCw, Film, Search } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -31,7 +31,7 @@ interface MovieListProps {
   refreshTrigger?: number;
 }
 
-export const MovieList: React.FC<MovieListProps> = ({ refreshTrigger }) => {
+export const MovieList: React.FC = () => {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -51,10 +51,11 @@ export const MovieList: React.FC<MovieListProps> = ({ refreshTrigger }) => {
 
   useEffect(() => {
     loadMovies();
-    // Refresh every 5 seconds to update download/transcode progress
+    
+    // Auto-refresh every 5 seconds to update progress
     const interval = setInterval(loadMovies, 5000);
     return () => clearInterval(interval);
-  }, [refreshTrigger]);
+  }, []);
 
   const handleMovieSelect = (imdbId: string) => {
     navigate(`/movie/${imdbId}`);
@@ -80,9 +81,13 @@ export const MovieList: React.FC<MovieListProps> = ({ refreshTrigger }) => {
       case 'ready':
         return 'Ready to stream';
       case 'transcoding':
-        return `Transcoding ${movie.transcodeProgress}%`;
+        // Show detailed transcoding info with quality
+        const progress = parseFloat(movie.transcodeProgress || '0').toFixed(0);
+        const quality = movie.selectedQuality || '';
+        return `Transcoding ${quality ? quality + ' - ' : ''}${progress}%`;
       case 'downloading':
-        return `Downloading ${movie.downloadProgress}%`;
+        const downloadProgress = parseFloat(movie.downloadProgress || '0').toFixed(0);
+        return `Downloading ${downloadProgress}%`;
       case 'error':
         return 'Error';
       default:
@@ -127,8 +132,15 @@ export const MovieList: React.FC<MovieListProps> = ({ refreshTrigger }) => {
           {movies.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Film className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No movies in your library yet</p>
-              <p className="text-sm">Search and download movies to get started</p>
+              <p className="text-lg font-medium mb-2">No movies in your library yet</p>
+              <p className="text-sm mb-4">Search and download movies to get started</p>
+              <Button 
+                onClick={() => navigate('/search')}
+                className="flex items-center gap-2 mx-auto"
+              >
+                <Search className="h-4 w-4" />
+                Search Movies
+              </Button>
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
