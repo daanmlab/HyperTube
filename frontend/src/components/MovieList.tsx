@@ -8,9 +8,9 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Download, Play, RefreshCw, Film } from 'lucide-react';
+import { Play, RefreshCw, Film } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
-import { VideoPlayer } from './VideoPlayer';
+import { useNavigate } from 'react-router-dom';
 
 interface Movie {
   imdbId: string;
@@ -33,8 +33,8 @@ interface MovieListProps {
 
 export const MovieList: React.FC<MovieListProps> = ({ refreshTrigger }) => {
   const [movies, setMovies] = useState<Movie[]>([]);
-  const [selectedMovie, setSelectedMovie] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   const loadMovies = async () => {
     setIsLoading(true);
@@ -57,7 +57,7 @@ export const MovieList: React.FC<MovieListProps> = ({ refreshTrigger }) => {
   }, [refreshTrigger]);
 
   const handleMovieSelect = (imdbId: string) => {
-    setSelectedMovie(imdbId);
+    navigate(`/movie/${imdbId}`);
   };
 
   const getStatusColor = (status: string) => {
@@ -199,14 +199,6 @@ export const MovieList: React.FC<MovieListProps> = ({ refreshTrigger }) => {
           )}
         </CardContent>
       </Card>
-
-      {selectedMovie && (
-        <VideoPlayer
-          videoId={selectedMovie}
-          title={movies.find(m => m.imdbId === selectedMovie)?.title || 'Movie'}
-          isMovie={true}
-        />
-      )}
     </div>
   );
 };
