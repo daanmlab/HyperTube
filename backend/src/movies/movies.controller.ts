@@ -18,7 +18,7 @@ import {
 } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { Public } from '../auth/decorators/public.decorator';
-import type { AriaService } from './aria/aria.service';
+import { AriaService } from './aria/aria.service';
 import {
   DeleteResponseDto,
   MessageResponseDto,
@@ -26,9 +26,10 @@ import {
   SearchResponseDto,
   StartDownloadResponseDto,
 } from './dto';
-import type { MoviesService } from './movies.service';
-import type { TpbService } from './tpb/tpb.service';
-import type { YtsService } from './yts/yts.service';
+import { MoviesService } from './movies.service';
+import { OptimizedSearchService } from './search/optimized-search.service';
+import { TpbService } from './tpb/tpb.service';
+import { YtsService } from './yts/yts.service';
 
 @ApiTags('movies')
 @Controller('movies')
@@ -46,7 +47,8 @@ export class MoviesController {
     private readonly ytsService: YtsService,
     private readonly ariaService: AriaService,
     private readonly moviesService: MoviesService,
-    private readonly tpbService: TpbService
+    private readonly tpbService: TpbService,
+    private readonly optimizedSearchService: OptimizedSearchService
   ) {}
 
   /**
@@ -103,6 +105,36 @@ export class MoviesController {
     }
 
     return { data };
+  }
+
+  @Get('search/optimized')
+  @ApiOperation({ summary: 'Optimized search with caching and parallel queries' })
+  @ApiResponse({
+    status: 200,
+    description: 'Movies found with stats',
+  })
+  @ApiQuery({ name: 'keywords', description: 'Search keywords' })
+  @ApiQuery({ name: 'page', description: 'Page number', required: false })
+  async optimizedSearch(
+    @Query('keywords') keywords: string,
+    @Query('page') page: string = '1'
+  ): Promise<any> {
+    const pageNumber = parseInt(page, 10) || 1;
+    return this.optimizedSearchService.search(keywords, pageNumber);
+  }
+
+  @Delete('search/cache')
+  @ApiOperation({ summary: 'Clear search cache' })
+  @ApiQuery({ name: 'keywords', description: 'Clear specific keyword cache', required: false })
+  async clearSearchCache(@Query('keywords') keywords?: string): Promise<{ message: string }> {
+    await this.optimizedSearchService.clearCache(keywords);
+    return { message: keywords ? `Cache cleared for "${keywords}"` : 'All search cache cleared' };
+  }
+
+  @Get('search/cache/stats')
+  @ApiOperation({ summary: 'Get search cache statistics' })
+  async getSearchCacheStats() {
+    return this.optimizedSearchService.getCacheStats();
   }
   @Get('details')
   @ApiOperation({ summary: 'Get movie details by IMDB ID' })

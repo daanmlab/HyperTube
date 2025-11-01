@@ -19,7 +19,8 @@
       },
       "style": {
         "useConst": "error",
-        "useTemplate": "warn"
+        "useTemplate": "warn",
+        "useImportType": "off"
       },
       "suspicious": {
         "noExplicitAny": "warn"
@@ -32,6 +33,9 @@
       "trailingCommas": "all",
       "semicolons": "always",
       "arrowParentheses": "always"
+    },
+    "parser": {
+      "unsafeParameterDecoratorsEnabled": true
     }
   }
 }

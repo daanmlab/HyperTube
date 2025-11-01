@@ -11,5 +11,5 @@
     "strictPropertyInitialization": false,
     "skipLibCheck": true
   },
-  "exclude": ["node_modules", "dist", "videos", "backup"]
+  "exclude": ["node_modules", "dist", "videos", "backup", "**/*.spec.ts", "**/*-test.ts", "**/performance-test.ts"]
 }

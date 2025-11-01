@@ -44,16 +44,13 @@ export class YtsService {
     synopsis: movie.synopsis || movie.summary || movie.description_full,
     runtime: movie.runtime,
     genres: Array.isArray(movie.genres) ? movie.genres : undefined,
-    image:
-      movie.large_cover_image ||
-      movie.medium_cover_image ||
-      movie.small_cover_image,
+    image: movie.large_cover_image || movie.medium_cover_image || movie.small_cover_image,
     rating: movie.rating,
     trailer: movie.yt_trailer_code
       ? `https://www.youtube.com/watch?v=${movie.yt_trailer_code}`
       : undefined,
     torrents:
-      movie.torrents?.map(t => ({
+      movie.torrents?.map((t) => ({
         resolution: t.quality,
         quality: t.quality,
         size: this.formatBytes(t.size_bytes),
@@ -68,7 +65,7 @@ export class YtsService {
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+    return `${Math.round((bytes / k ** i) * 100) / 100} ${sizes[i]}`;
   }
 
   private buildMagnet = (hash: string, title: string) =>
@@ -89,34 +86,24 @@ export class YtsService {
         limit: 50,
         sort_by: 'year',
         order_by: 'desc',
-        query_term: encodeURI(keywords),
+        query_term: keywords,
       };
-      console.log('YTS search params:', params);
-      console.log('YTS search URL:', `${BASE_URL}/list_movies.json`);
 
       const { data } = await lastValueFrom(
         this.http.get(`${BASE_URL}/list_movies.json`, {
           params,
           timeout: 10000,
-        })
-      );
-
-      console.log('YTS search response status:', data?.status);
-      console.log(
-        'YTS search response data:',
-        JSON.stringify(data).substring(0, 500)
+        }),
       );
 
       const movies: YtsMovie[] | undefined = data?.data?.movies;
       if (!movies) {
-        console.log('No movies found in response');
         return [];
       }
 
-      return movies.map(m => ({ ...this.mapMovie(m), api: 'yts' }));
-    } catch (err: any) {
-      this.logger.error(`YTS search error: ${err?.message || err}`);
-      console.log('Full error:', err);
+      return movies.map((m) => ({ ...this.mapMovie(m), api: 'yts' }));
+    } catch (err: unknown) {
+      this.logger.error(`YTS search error: ${err instanceof Error ? err.message : err}`);
       return null;
     }
   }
@@ -136,22 +123,29 @@ export class YtsService {
       };
 
       const { data } = await lastValueFrom(
-        this.http.get(`${BASE_URL}/list_movies.json`, { params })
+        this.http.get(`${BASE_URL}/list_movies.json`, { params }),
       );
 
       const movies: YtsMovie[] | undefined = data?.data?.movies;
       if (!movies) return [];
 
       return movies.map(this.mapMovie);
-    } catch (err: any) {
-      this.logger.error(err?.message || err);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(message);
       return null;
     }
   }
 
   async suggestionsByGenre(genre: string) {
     try {
-      let params: any = {
+      let params: {
+        page: number;
+        limit: number;
+        sort_by: string;
+        order_by: string;
+        genre?: string;
+      } = {
         page: 1,
         limit: 10,
         sort_by: 'download_count',
@@ -159,9 +153,7 @@ export class YtsService {
         genre,
       };
 
-      let { data } = await lastValueFrom(
-        this.http.get(`${BASE_URL}/list_movies.json`, { params })
-      );
+      let { data } = await lastValueFrom(this.http.get(`${BASE_URL}/list_movies.json`, { params }));
 
       let movies: YtsMovie[] | undefined = data?.data?.movies;
       if (!movies) return [];
@@ -173,15 +165,14 @@ export class YtsService {
           sort_by: 'download_count',
           order_by: 'desc',
         };
-        ({ data } = await lastValueFrom(
-          this.http.get(`${BASE_URL}/list_movies.json`, { params })
-        ));
+        ({ data } = await lastValueFrom(this.http.get(`${BASE_URL}/list_movies.json`, { params })));
         movies = data?.data?.movies;
       }
 
       return (movies || []).map(this.mapMovie);
-    } catch (err: any) {
-      this.logger.error(err?.message || err);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(message);
       return null;
     }
   }
@@ -202,7 +193,7 @@ export class YtsService {
       const params = { page: 1, limit: 1, query_term: imdbId };
 
       const { data } = await lastValueFrom(
-        this.http.get(`${BASE_URL}/list_movies.json`, { params })
+        this.http.get(`${BASE_URL}/list_movies.json`, { params }),
       );
 
       if ((data?.data?.movie_count ?? 0) < 1) return null;
@@ -210,7 +201,7 @@ export class YtsService {
       const movie: YtsMovie = data.data.movies[0];
 
       const torrents =
-        movie.torrents?.map(t => ({
+        movie.torrents?.map((t) => ({
           language: movie.language?.toLowerCase() || null,
           resolution: t.quality,
           file_size: t.size_bytes,
@@ -230,8 +221,9 @@ export class YtsService {
         torrents,
         api: 'yts',
       };
-    } catch (err: any) {
-      this.logger.error(err?.message || err);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(message);
       return null;
     }
   }
