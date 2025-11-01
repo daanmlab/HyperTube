@@ -1,19 +1,5 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Post,
-  Put,
-  Request,
-  UseGuards,
-} from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
+import { Body, Controller, Get, Param, Post, Put, Request, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UpdateWatchProgressDto, WatchHistoryResponseDto } from './dto';
 import { WatchHistoryService } from './watch-history.service';
@@ -37,10 +23,7 @@ export class WatchHistoryController {
     @Body() updateWatchProgressDto: UpdateWatchProgressDto,
     @Request() req: any,
   ): Promise<WatchHistoryResponseDto> {
-    return this.watchHistoryService.updateProgress(
-      updateWatchProgressDto,
-      req.user,
-    );
+    return this.watchHistoryService.updateProgress(updateWatchProgressDto, req.user);
   }
 
   @Get()

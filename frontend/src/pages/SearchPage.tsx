@@ -31,9 +31,7 @@ export const SearchPage: React.FC = () => {
                 <Search className="h-8 w-8" />
                 Search Movies
               </h1>
-              <p className="text-muted-foreground">
-                Find and download movies to your library
-              </p>
+              <p className="text-muted-foreground">Find and download movies to your library</p>
             </div>
           </div>
         </div>

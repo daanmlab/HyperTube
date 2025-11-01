@@ -23,8 +23,7 @@ export class VideoStatusResponseDto {
   message: string;
 
   @ApiProperty({
-    description:
-      'Whether the video is available for streaming (at least one quality ready)',
+    description: 'Whether the video is available for streaming (at least one quality ready)',
     example: true,
   })
   availableForStreaming: boolean;

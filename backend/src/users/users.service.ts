@@ -10,7 +10,7 @@ import { User } from '../entities/user.entity';
 export class UsersService {
   constructor(
     @InjectRepository(User)
-    private usersRepository: Repository<User>
+    private usersRepository: Repository<User>,
   ) {}
 
   async create(createUserDto: RegisterDto): Promise<User> {
@@ -31,10 +31,7 @@ export class UsersService {
     }
 
     const saltRounds = 12;
-    const hashedPassword = await bcrypt.hash(
-      createUserDto.password,
-      saltRounds
-    );
+    const hashedPassword = await bcrypt.hash(createUserDto.password, saltRounds);
 
     const user = this.usersRepository.create({
       ...createUserDto,
@@ -95,10 +92,7 @@ export class UsersService {
     return this.usersRepository.save(user);
   }
 
-  async linkFortyTwoAccount(
-    userId: string,
-    userData: FortyTwoUserData
-  ): Promise<User> {
+  async linkFortyTwoAccount(userId: string, userData: FortyTwoUserData): Promise<User> {
     await this.usersRepository.update(userId, {
       fortyTwoId: userData.fortyTwoId,
       fortyTwoLogin: userData.fortyTwoLogin,
@@ -114,10 +108,7 @@ export class UsersService {
     return user;
   }
 
-  async updateFortyTwoData(
-    userId: string,
-    userData: FortyTwoUserData
-  ): Promise<User> {
+  async updateFortyTwoData(userId: string, userData: FortyTwoUserData): Promise<User> {
     await this.usersRepository.update(userId, {
       avatarUrl: userData.avatarUrl,
       oauthData: userData.oauthData,
@@ -155,10 +146,7 @@ export class UsersService {
     return this.usersRepository.save(user);
   }
 
-  async linkGoogleAccount(
-    userId: string,
-    userData: GoogleUserData
-  ): Promise<User> {
+  async linkGoogleAccount(userId: string, userData: GoogleUserData): Promise<User> {
     await this.usersRepository.update(userId, {
       googleId: userData.googleId,
       avatarUrl: userData.avatarUrl,
@@ -173,10 +161,7 @@ export class UsersService {
     return user;
   }
 
-  async updateGoogleData(
-    userId: string,
-    userData: GoogleUserData
-  ): Promise<User> {
+  async updateGoogleData(userId: string, userData: GoogleUserData): Promise<User> {
     await this.usersRepository.update(userId, {
       avatarUrl: userData.avatarUrl,
       oauthData: userData.oauthData,
@@ -190,10 +175,7 @@ export class UsersService {
     return user;
   }
 
-  async validatePassword(
-    plainPassword: string,
-    hashedPassword: string
-  ): Promise<boolean> {
+  async validatePassword(plainPassword: string, hashedPassword: string): Promise<boolean> {
     if (!hashedPassword) {
       return false; // OAuth users don't have passwords
     }

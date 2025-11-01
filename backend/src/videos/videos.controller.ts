@@ -54,11 +54,9 @@ export class VideosController {
   @UseInterceptors(
     FileInterceptor('file', {
       dest: '/app/videos', // Shared volume path
-    })
+    }),
   )
-  uploadVideo(
-    @UploadedFile() file: Express.Multer.File
-  ): VideoUploadResponseDto {
+  uploadVideo(@UploadedFile() file: Express.Multer.File): VideoUploadResponseDto {
     return this.videosService.handleUpload(file);
   }
 
@@ -80,9 +78,7 @@ export class VideosController {
     description: 'Returns video processing status and progress.',
     type: VideoStatusResponseDto,
   })
-  async getVideoStatus(
-    @Param('videoId') videoId: string
-  ): Promise<VideoStatusResponseDto> {
+  async getVideoStatus(@Param('videoId') videoId: string): Promise<VideoStatusResponseDto> {
     return this.videosService.getVideoStatus(videoId);
   }
 
@@ -105,10 +101,7 @@ export class VideosController {
     status: 200,
     description: 'Returns master HLS playlist for adaptive bitrate streaming.',
   })
-  async getMasterPlaylist(
-    @Param('videoId') videoId: string,
-    @Res() res: Response
-  ) {
+  async getMasterPlaylist(@Param('videoId') videoId: string, @Res() res: Response) {
     return this.videosService.getMasterPlaylist(videoId, res);
   }
 
@@ -128,7 +121,7 @@ export class VideosController {
   async getQualityPlaylist(
     @Param('videoId') videoId: string,
     @Param('quality') quality: string,
-    @Res() res: Response
+    @Res() res: Response,
   ) {
     return this.videosService.getQualityPlaylist(videoId, quality, res);
   }
@@ -141,10 +134,7 @@ export class VideosController {
     status: 200,
     description: 'Returns HLS playlist (.m3u8) for video.',
   })
-  async getHlsPlaylist(
-    @Param('videoId') videoId: string,
-    @Res() res: Response
-  ) {
+  async getHlsPlaylist(@Param('videoId') videoId: string, @Res() res: Response) {
     return this.videosService.getHlsPlaylist(videoId, res);
   }
 
@@ -160,7 +150,7 @@ export class VideosController {
   async getHlsSegment(
     @Param('videoId') videoId: string,
     @Param('segment') segment: string,
-    @Res() res: Response
+    @Res() res: Response,
   ) {
     return this.videosService.getHlsSegment(videoId, segment, res);
   }
@@ -189,7 +179,7 @@ export class VideosController {
   async getThumbnail(
     @Param('videoId') videoId: string,
     @Param('thumbnailId') thumbnailId: string,
-    @Res() res: Response
+    @Res() res: Response,
   ) {
     return this.videosService.getThumbnail(videoId, thumbnailId, res);
   }

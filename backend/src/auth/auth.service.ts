@@ -1,8 +1,4 @@
-import {
-  ConflictException,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { AuthResponseDto, LoginDto, RegisterDto } from './dto/auth.dto';
@@ -32,7 +28,7 @@ export interface GoogleUserData {
 export class AuthService {
   constructor(
     private usersService: UsersService,
-    private jwtService: JwtService
+    private jwtService: JwtService,
   ) {}
 
   async validateUser(identifier: string, password: string): Promise<any> {
@@ -46,10 +42,7 @@ export class AuthService {
       throw new UnauthorizedException('Account has been deactivated');
     }
 
-    const isPasswordValid = await this.usersService.validatePassword(
-      password,
-      user.password
-    );
+    const isPasswordValid = await this.usersService.validatePassword(password, user.password);
 
     if (!isPasswordValid) {
       return null;
@@ -59,10 +52,7 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto): Promise<AuthResponseDto> {
-    const user = await this.validateUser(
-      loginDto.identifier,
-      loginDto.password
-    );
+    const user = await this.validateUser(loginDto.identifier, loginDto.password);
 
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');

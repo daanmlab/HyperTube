@@ -1,12 +1,6 @@
 import { api } from '@/api/service';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertCircle, CheckCircle, FileVideo, Upload } from 'lucide-react';
 import React, { useState } from 'react';
 
@@ -20,9 +14,7 @@ interface VideoUploadProps {
   onVideoUploaded?: (videoId: string) => void;
 }
 
-export const VideoUpload: React.FC<VideoUploadProps> = ({
-  onVideoUploaded,
-}) => {
+export const VideoUpload: React.FC<VideoUploadProps> = ({ onVideoUploaded }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>({
     status: 'idle',
@@ -66,9 +58,7 @@ export const VideoUpload: React.FC<VideoUploadProps> = ({
     try {
       setUploadStatus({ status: 'uploading', message: 'Uploading video...' });
 
-      const response = await api.videos.videosControllerUploadVideo(
-        selectedFile
-      );
+      const response = await api.videos.videosControllerUploadVideo(selectedFile);
 
       const { filename, message } = response.data;
       setUploadStatus({
@@ -79,8 +69,7 @@ export const VideoUpload: React.FC<VideoUploadProps> = ({
 
       const pollInterval = setInterval(async () => {
         try {
-          const statusResponse =
-            await api.videos.videosControllerGetVideoStatus(filename);
+          const statusResponse = await api.videos.videosControllerGetVideoStatus(filename);
           const status = statusResponse.data;
 
           if (status.status === 'ready') {
@@ -145,9 +134,7 @@ export const VideoUpload: React.FC<VideoUploadProps> = ({
     switch (uploadStatus.status) {
       case 'uploading':
       case 'processing':
-        return (
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-        );
+        return <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>;
       case 'completed':
         return <CheckCircle className="h-4 w-4 text-green-500" />;
       case 'error':
@@ -183,9 +170,7 @@ export const VideoUpload: React.FC<VideoUploadProps> = ({
             <div className="space-y-2">
               <FileVideo className="h-8 w-8 mx-auto text-primary" />
               <p className="font-medium">{selectedFile.name}</p>
-              <p className="text-sm text-muted-foreground">
-                {formatFileSize(selectedFile.size)}
-              </p>
+              <p className="text-sm text-muted-foreground">{formatFileSize(selectedFile.size)}</p>
             </div>
           ) : (
             <>
@@ -196,9 +181,7 @@ export const VideoUpload: React.FC<VideoUploadProps> = ({
               <input
                 type="file"
                 accept="video/*"
-                onChange={e =>
-                  e.target.files?.[0] && handleFileSelect(e.target.files[0])
-                }
+                onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
                 className="hidden"
                 id="video-upload"
               />
@@ -226,10 +209,7 @@ export const VideoUpload: React.FC<VideoUploadProps> = ({
 
         {uploadStatus.status === 'completed' && uploadStatus.videoId && (
           <div className="text-center text-sm text-muted-foreground">
-            Video ID:{' '}
-            <code className="bg-muted px-1 rounded">
-              {uploadStatus.videoId}
-            </code>
+            Video ID: <code className="bg-muted px-1 rounded">{uploadStatus.videoId}</code>
           </div>
         )}
       </CardContent>

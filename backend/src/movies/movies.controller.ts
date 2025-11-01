@@ -9,13 +9,7 @@ import {
   Query,
   Res,
 } from '@nestjs/common';
-import {
-  ApiExtraModels,
-  ApiOperation,
-  ApiQuery,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiExtraModels, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { Public } from '../auth/decorators/public.decorator';
 import { AriaService } from './aria/aria.service';
@@ -40,7 +34,7 @@ import { YtsService } from './yts/yts.service';
   StartDownloadResponseDto,
   MessageResponseDto,
   SearchResponseDto,
-  DeleteResponseDto
+  DeleteResponseDto,
 )
 export class MoviesController {
   constructor(
@@ -48,7 +42,7 @@ export class MoviesController {
     private readonly ariaService: AriaService,
     private readonly moviesService: MoviesService,
     private readonly tpbService: TpbService,
-    private readonly optimizedSearchService: OptimizedSearchService
+    private readonly optimizedSearchService: OptimizedSearchService,
   ) {}
 
   /**
@@ -93,7 +87,7 @@ export class MoviesController {
   @ApiQuery({ name: 'page', description: 'Page number', required: false })
   async search(
     @Query('keywords') keywords: string,
-    @Query('page') page: string = '1'
+    @Query('page') page: string = '1',
   ): Promise<SearchResponseDto> {
     const pageNumber = parseInt(page, 10) || 1;
     let data = await this.ytsService.search(keywords, pageNumber);
@@ -117,7 +111,7 @@ export class MoviesController {
   @ApiQuery({ name: 'page', description: 'Page number', required: false })
   async optimizedSearch(
     @Query('keywords') keywords: string,
-    @Query('page') page: string = '1'
+    @Query('page') page: string = '1',
   ): Promise<any> {
     const pageNumber = parseInt(page, 10) || 1;
     return this.optimizedSearchService.search(keywords, pageNumber);
@@ -177,10 +171,7 @@ export class MoviesController {
   })
   @ApiQuery({ name: 'title', description: 'Movie title' })
   @ApiQuery({ name: 'year', description: 'Release year', required: false })
-  async getBestTorrent(
-    @Query('title') title: string,
-    @Query('year') year?: string
-  ) {
+  async getBestTorrent(@Query('title') title: string, @Query('year') year?: string) {
     if (!title) {
       throw new HttpException('title is required', HttpStatus.BAD_REQUEST);
     }
@@ -210,7 +201,7 @@ export class MoviesController {
   })
   async startDownload(
     @Query('imdbId') imdbId: string,
-    @Query('quality') quality?: string
+    @Query('quality') quality?: string,
   ): Promise<StartDownloadResponseDto> {
     if (!imdbId) {
       throw new HttpException('imdbId is required', HttpStatus.BAD_REQUEST);
@@ -222,10 +213,7 @@ export class MoviesController {
     }
 
     if (!movie.torrents || movie.torrents.length === 0) {
-      throw new HttpException(
-        'No torrents available for this movie',
-        HttpStatus.NOT_FOUND
-      );
+      throw new HttpException('No torrents available for this movie', HttpStatus.NOT_FOUND);
     }
 
     // Allow quality selection via query param, fallback to best (largest size)
@@ -237,29 +225,21 @@ export class MoviesController {
       // Pick largest torrent if possible
       selectedTorrent = movie.torrents.reduce(
         (a: any, b: any) => (a.size > b.size ? a : b),
-        movie.torrents[0]
+        movie.torrents[0],
       );
     }
 
     if (!selectedTorrent.magnet) {
-      throw new HttpException(
-        'No magnet link found for selected torrent',
-        HttpStatus.NOT_FOUND
-      );
+      throw new HttpException('No magnet link found for selected torrent', HttpStatus.NOT_FOUND);
     }
 
     // Log download attempt
     console.log(
-      `Starting download for imdbId=${imdbId}, quality=${
-        quality || selectedTorrent.resolution
-      }`
+      `Starting download for imdbId=${imdbId}, quality=${quality || selectedTorrent.resolution}`,
     );
 
     try {
-      const ariaResult = await this.ariaService.addUri(
-        [selectedTorrent.magnet],
-        {}
-      );
+      const ariaResult = await this.ariaService.addUri([selectedTorrent.magnet], {});
 
       // Create or update movie record in database
       const movieRecord = await this.moviesService.createMovie({
@@ -295,10 +275,7 @@ export class MoviesController {
       };
     } catch (error) {
       console.error('Failed to start download:', error);
-      throw new HttpException(
-        'Failed to start download',
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
+      throw new HttpException('Failed to start download', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -318,7 +295,7 @@ export class MoviesController {
     const path = require('path');
     const { execSync } = require('child_process');
 
-    return movies.map(movie => {
+    return movies.map((movie) => {
       let transcodeProgress = movie.transcodeProgress?.toString() || '0';
       let currentQuality = '';
       let currentQualityProgress = 0;
@@ -347,15 +324,13 @@ export class MoviesController {
                   videoDuration = metadata.duration;
                 }
               } catch (err) {
-                console.log(
-                  `[PROGRESS] Could not read metadata, using defaults`
-                );
+                console.log(`[PROGRESS] Could not read metadata, using defaults`);
               }
             }
 
             const expectedSegments = Math.ceil(videoDuration / segmentTime);
             console.log(
-              `[PROGRESS] ${movie.imdbId} - Expected segments: ${expectedSegments} (duration: ${videoDuration}s, segment: ${segmentTime}s)`
+              `[PROGRESS] ${movie.imdbId} - Expected segments: ${expectedSegments} (duration: ${videoDuration}s, segment: ${segmentTime}s)`,
             );
 
             for (let i = 0; i < qualities.length; i++) {
@@ -372,52 +347,42 @@ export class MoviesController {
                 let isQualityComplete = false;
                 if (fs.existsSync(playlistPath)) {
                   try {
-                    const playlistContent = fs.readFileSync(
-                      playlistPath,
-                      'utf8'
-                    );
-                    isQualityComplete =
-                      playlistContent.includes('#EXT-X-ENDLIST');
+                    const playlistContent = fs.readFileSync(playlistPath, 'utf8');
+                    isQualityComplete = playlistContent.includes('#EXT-X-ENDLIST');
                   } catch {}
                 }
 
                 console.log(
-                  `[PROGRESS] ${
-                    movie.imdbId
-                  } - ${quality}: ${currentSegments} segments${
+                  `[PROGRESS] ${movie.imdbId} - ${quality}: ${currentSegments} segments${
                     isQualityComplete ? ' (COMPLETE)' : ''
-                  }`
+                  }`,
                 );
 
                 // Check if we have enough segments for streaming (at least one quality)
                 if (currentSegments >= minSegmentsForStreaming && !canStream) {
                   canStream = true;
                   console.log(
-                    `[STREAMING] ${movie.imdbId} - ${quality} has ${currentSegments} segments, streaming enabled!`
+                    `[STREAMING] ${movie.imdbId} - ${quality} has ${currentSegments} segments, streaming enabled!`,
                   );
                 }
 
                 if (currentSegments > 0) {
                   const qualityWeight = 50;
-                  let qualityProgress = Math.min(
-                    100,
-                    (currentSegments / expectedSegments) * 100
-                  );
+                  let qualityProgress = Math.min(100, (currentSegments / expectedSegments) * 100);
 
                   // If quality is complete, set progress to 100%
                   if (isQualityComplete) {
                     qualityProgress = 100;
                   }
 
-                  const weightedProgress =
-                    (qualityProgress * qualityWeight) / 100;
+                  const weightedProgress = (qualityProgress * qualityWeight) / 100;
 
                   console.log(
                     `[PROGRESS] ${
                       movie.imdbId
                     } - ${quality}: ${currentSegments}/${expectedSegments} = ${qualityProgress.toFixed(
-                      1
-                    )}% -> weighted: ${weightedProgress.toFixed(1)}%`
+                      1,
+                    )}% -> weighted: ${weightedProgress.toFixed(1)}%`,
                   );
 
                   totalProgress += weightedProgress;
@@ -439,17 +404,14 @@ export class MoviesController {
                 }
               } catch (err) {
                 const error = err as Error;
-                console.error(
-                  `[PROGRESS] Error counting segments for ${quality}:`,
-                  error.message
-                );
+                console.error(`[PROGRESS] Error counting segments for ${quality}:`, error.message);
               }
             }
 
             if (totalProgress > 0) {
               transcodeProgress = Math.round(totalProgress).toString();
               console.log(
-                `[PROGRESS] ${movie.imdbId} - Final progress: ${transcodeProgress}% (${currentQuality} at ${currentQualityProgress}%)`
+                `[PROGRESS] ${movie.imdbId} - Final progress: ${transcodeProgress}% (${currentQuality} at ${currentQualityProgress}%)`,
               );
             }
           } else {
@@ -457,10 +419,7 @@ export class MoviesController {
           }
         } catch (error) {
           const err = error as Error;
-          console.error(
-            `[PROGRESS] Error calculating progress for ${movie.imdbId}:`,
-            err.message
-          );
+          console.error(`[PROGRESS] Error calculating progress for ${movie.imdbId}:`, err.message);
           // Fall back to database value
         }
       }
@@ -488,9 +447,7 @@ export class MoviesController {
         transcodeProgress: transcodeProgress,
         currentQuality: currentQuality || undefined,
         currentQualityProgress:
-          currentQualityProgress > 0
-            ? currentQualityProgress.toString()
-            : undefined,
+          currentQualityProgress > 0 ? currentQualityProgress.toString() : undefined,
         availableQualities: this.safeJsonParse(movie.availableQualities),
         metadata: movie.metadata,
         errorMessage: movie.errorMessage,
@@ -575,9 +532,7 @@ export class MoviesController {
 
             try {
               const { execSync } = require('child_process');
-              const segmentCount = execSync(
-                `ls -1 ${pattern} 2>/dev/null | wc -l`
-              )
+              const segmentCount = execSync(`ls -1 ${pattern} 2>/dev/null | wc -l`)
                 .toString()
                 .trim();
               const currentSegments = parseInt(segmentCount) || 0;
@@ -589,12 +544,8 @@ export class MoviesController {
 
                 // Calculate progress for this quality (each quality gets 50% of total)
                 const qualityWeight = 50; // Each quality is 50% of total progress
-                const qualityProgress = Math.min(
-                  100,
-                  (currentSegments / expectedSegments) * 100
-                );
-                const weightedProgress =
-                  (qualityProgress * qualityWeight) / 100;
+                const qualityProgress = Math.min(100, (currentSegments / expectedSegments) * 100);
+                const weightedProgress = (qualityProgress * qualityWeight) / 100;
 
                 totalProgress += weightedProgress;
                 currentQuality = quality;
@@ -627,9 +578,7 @@ export class MoviesController {
       status: movie.status,
       transcodeProgress: movie.transcodeProgress?.toString() || '0',
       message:
-        movie.status === 'transcoding'
-          ? `Transcoding ${movie.selectedQuality}`
-          : movie.status,
+        movie.status === 'transcoding' ? `Transcoding ${movie.selectedQuality}` : movie.status,
     };
   }
 
@@ -645,7 +594,7 @@ export class MoviesController {
     @Query('downloadedSize') downloadedSize?: string,
     @Query('totalSize') totalSize?: string,
     @Query('downloadPath') downloadPath?: string,
-    @Query('status') status?: string
+    @Query('status') status?: string,
   ): Promise<MessageResponseDto> {
     if (!imdbId) {
       throw new HttpException('imdbId is required', HttpStatus.BAD_REQUEST);
@@ -660,7 +609,7 @@ export class MoviesController {
       await this.moviesService.updateDownloadProgress(
         imdbId,
         parseInt(downloadedSize),
-        totalSize ? parseInt(totalSize) : undefined
+        totalSize ? parseInt(totalSize) : undefined,
       );
     }
 
@@ -684,13 +633,10 @@ export class MoviesController {
   })
   async updateVideoPath(
     @Query('imdbId') imdbId: string,
-    @Query('videoPath') videoPath: string
+    @Query('videoPath') videoPath: string,
   ): Promise<MessageResponseDto> {
     if (!imdbId || !videoPath) {
-      throw new HttpException(
-        'imdbId and videoPath are required',
-        HttpStatus.BAD_REQUEST
-      );
+      throw new HttpException('imdbId and videoPath are required', HttpStatus.BAD_REQUEST);
     }
 
     await this.moviesService.updateVideoPath(imdbId, videoPath);
@@ -706,19 +652,13 @@ export class MoviesController {
   })
   async updateTranscodeProgress(
     @Query('imdbId') imdbId: string,
-    @Query('progress') progress: string
+    @Query('progress') progress: string,
   ): Promise<MessageResponseDto> {
     if (!imdbId || !progress) {
-      throw new HttpException(
-        'imdbId and progress are required',
-        HttpStatus.BAD_REQUEST
-      );
+      throw new HttpException('imdbId and progress are required', HttpStatus.BAD_REQUEST);
     }
 
-    await this.moviesService.updateTranscodeProgress(
-      imdbId,
-      parseFloat(progress)
-    );
+    await this.moviesService.updateTranscodeProgress(imdbId, parseFloat(progress));
     return { message: 'Transcode progress updated successfully' };
   }
 
@@ -729,9 +669,7 @@ export class MoviesController {
     description: 'Movie deleted',
     type: DeleteResponseDto,
   })
-  async deleteMovie(
-    @Param('imdbId') imdbId: string
-  ): Promise<DeleteResponseDto> {
+  async deleteMovie(@Param('imdbId') imdbId: string): Promise<DeleteResponseDto> {
     if (!imdbId) {
       throw new HttpException('imdbId is required', HttpStatus.BAD_REQUEST);
     }
@@ -772,9 +710,7 @@ export class MoviesController {
           await this.ariaService.removeDownload(movie.ariaGid);
           console.log(`Stopped aria2 download for ${movie.imdbId}`);
         } catch (error) {
-          console.log(
-            `Could not stop aria2 download: ${(error as any).message}`
-          );
+          console.log(`Could not stop aria2 download: ${(error as any).message}`);
         }
       }
     }
@@ -786,10 +722,7 @@ export class MoviesController {
   // HLS Streaming endpoints for movies
   @Get(':imdbId/master.m3u8')
   @Public()
-  async getMovieMasterPlaylist(
-    @Param('imdbId') imdbId: string,
-    @Res() res: Response
-  ) {
+  async getMovieMasterPlaylist(@Param('imdbId') imdbId: string, @Res() res: Response) {
     return this.moviesService.getMasterPlaylist(imdbId, res);
   }
 
@@ -799,7 +732,7 @@ export class MoviesController {
   async getMovieOutputPlaylist(
     @Param('imdbId') imdbId: string,
     @Param('quality') quality: string,
-    @Res() res: Response
+    @Res() res: Response,
   ) {
     return this.moviesService.getOutputPlaylist(imdbId, quality, res);
   }
@@ -810,7 +743,7 @@ export class MoviesController {
   async getMovieOutputSegment(
     @Param('imdbId') imdbId: string,
     @Param('filename') filename: string,
-    @Res() res: Response
+    @Res() res: Response,
   ) {
     return this.moviesService.getOutputFile(imdbId, filename, res);
   }
@@ -820,7 +753,7 @@ export class MoviesController {
   async getMovieQualityPlaylist(
     @Param('imdbId') imdbId: string,
     @Param('quality') quality: string,
-    @Res() res: Response
+    @Res() res: Response,
   ) {
     return this.moviesService.getQualityPlaylist(imdbId, quality, res);
   }
@@ -831,7 +764,7 @@ export class MoviesController {
     @Param('imdbId') imdbId: string,
     @Param('quality') quality: string,
     @Param('segment') segment: string,
-    @Res() res: Response
+    @Res() res: Response,
   ) {
     return this.moviesService.getSegment(imdbId, quality, segment, res);
   }
@@ -841,7 +774,7 @@ export class MoviesController {
   async getMovieThumbnail(
     @Param('imdbId') imdbId: string,
     @Param('thumbnailId') thumbnailId: string,
-    @Res() res: Response
+    @Res() res: Response,
   ) {
     return this.moviesService.getThumbnail(imdbId, thumbnailId, res);
   }

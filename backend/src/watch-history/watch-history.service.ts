@@ -25,9 +25,7 @@ export class WatchHistoryService {
     });
 
     if (!movie) {
-      throw new NotFoundException(
-        `Movie with IMDB ID ${updateWatchProgressDto.imdbId} not found`,
-      );
+      throw new NotFoundException(`Movie with IMDB ID ${updateWatchProgressDto.imdbId} not found`);
     }
 
     // Find existing watch history or create new
@@ -78,10 +76,7 @@ export class WatchHistoryService {
     return history.map((item) => this.toResponseDto(item));
   }
 
-  async getMovieProgress(
-    imdbId: string,
-    user: User,
-  ): Promise<WatchHistoryResponseDto | null> {
+  async getMovieProgress(imdbId: string, user: User): Promise<WatchHistoryResponseDto | null> {
     const watchHistory = await this.watchHistoryRepository.findOne({
       where: {
         userId: user.id,
@@ -109,9 +104,7 @@ export class WatchHistoryService {
 
   private toResponseDto(watchHistory: WatchHistory): WatchHistoryResponseDto {
     const progressPercentage = watchHistory.totalSeconds
-      ? Math.round(
-          (watchHistory.watchedSeconds / watchHistory.totalSeconds) * 100 * 100,
-        ) / 100
+      ? Math.round((watchHistory.watchedSeconds / watchHistory.totalSeconds) * 100 * 100) / 100
       : 0;
 
     return {

@@ -17,12 +17,7 @@ export class FortyTwoStrategy extends PassportStrategy(Strategy, '42') {
     });
   }
 
-  async validate(
-    accessToken: string,
-    refreshToken: string,
-    profile: any,
-    done: any,
-  ): Promise<any> {
+  async validate(accessToken: string, refreshToken: string, profile: any, done: any): Promise<any> {
     try {
       // Get user info from 42 API
       const response = await axios.get('https://api.intra.42.fr/v2/me', {

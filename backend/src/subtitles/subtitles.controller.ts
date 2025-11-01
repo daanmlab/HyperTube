@@ -1,18 +1,5 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
+import { Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateSubtitleDto } from './dto/create-subtitle.dto';
 import { SubtitleResponseDto } from './dto/subtitle-response.dto';
@@ -36,9 +23,7 @@ export class SubtitlesController {
     status: 409,
     description: 'Subtitle already exists for this language',
   })
-  async create(
-    @Body() createSubtitleDto: CreateSubtitleDto,
-  ): Promise<SubtitleResponseDto> {
+  async create(@Body() createSubtitleDto: CreateSubtitleDto): Promise<SubtitleResponseDto> {
     return this.subtitlesService.create(createSubtitleDto);
   }
 
@@ -49,9 +34,7 @@ export class SubtitlesController {
     description: 'List of subtitles',
     type: [SubtitleResponseDto],
   })
-  async findByMovie(
-    @Param('imdbId') imdbId: string,
-  ): Promise<SubtitleResponseDto[]> {
+  async findByMovie(@Param('imdbId') imdbId: string): Promise<SubtitleResponseDto[]> {
     return this.subtitlesService.findByMovie(imdbId);
   }
 

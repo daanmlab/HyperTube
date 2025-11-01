@@ -21,7 +21,7 @@ apiClient.interceptors.request.use(
   },
   (error: any) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // Response interceptor for handling common errors
@@ -36,7 +36,7 @@ apiClient.interceptors.response.use(
       window.location.href = '/auth';
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 // Helper types for API responses
@@ -53,9 +53,7 @@ export interface ApiError {
 }
 
 // Helper function to handle API calls with proper error handling
-export const apiCall = async <T>(
-  request: () => Promise<AxiosResponse<T>>
-): Promise<T> => {
+export const apiCall = async <T>(request: () => Promise<AxiosResponse<T>>): Promise<T> => {
   try {
     const response = await request();
     return response.data;

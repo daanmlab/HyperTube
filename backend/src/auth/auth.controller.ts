@@ -9,15 +9,9 @@ import {
   Res,
   UseGuards,
   UsePipes,
-  ValidationPipe
+  ValidationPipe,
 } from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiBody,
-  ApiOperation,
-  ApiResponse,
-  ApiTags
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -37,18 +31,18 @@ export class AuthController {
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Register a new user' })
-  @ApiResponse({ 
-    status: 201, 
+  @ApiResponse({
+    status: 201,
     description: 'User successfully registered',
-    type: AuthResponseDto 
+    type: AuthResponseDto,
   })
-  @ApiResponse({ 
-    status: 400, 
-    description: 'Validation error' 
+  @ApiResponse({
+    status: 400,
+    description: 'Validation error',
   })
-  @ApiResponse({ 
-    status: 409, 
-    description: 'User already exists' 
+  @ApiResponse({
+    status: 409,
+    description: 'User already exists',
   })
   async register(@Body() registerDto: RegisterDto): Promise<AuthResponseDto> {
     return this.authService.register(registerDto);
@@ -59,14 +53,14 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login user' })
   @ApiBody({ type: LoginDto })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'User successfully logged in',
-    type: AuthResponseDto 
+    type: AuthResponseDto,
   })
-  @ApiResponse({ 
-    status: 401, 
-    description: 'Invalid credentials' 
+  @ApiResponse({
+    status: 401,
+    description: 'Invalid credentials',
   })
   async login(@Body() loginDto: LoginDto): Promise<AuthResponseDto> {
     return this.authService.login(loginDto);
@@ -76,13 +70,13 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current user profile' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'User profile retrieved successfully' 
+  @ApiResponse({
+    status: 200,
+    description: 'User profile retrieved successfully',
   })
-  @ApiResponse({ 
-    status: 401, 
-    description: 'Unauthorized' 
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
   })
   async getProfile(@CurrentUser() user: any) {
     return user;
@@ -92,13 +86,13 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current user information' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Current user information' 
+  @ApiResponse({
+    status: 200,
+    description: 'Current user information',
   })
-  @ApiResponse({ 
-    status: 401, 
-    description: 'Unauthorized' 
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
   })
   async getCurrentUser(@CurrentUser('id') userId: string) {
     return this.authService.getProfile(userId);
@@ -109,9 +103,9 @@ export class AuthController {
   @Get('42')
   @UseGuards(FortyTwoAuthGuard)
   @ApiOperation({ summary: 'Initiate 42 OAuth login' })
-  @ApiResponse({ 
-    status: 302, 
-    description: 'Redirects to 42 OAuth authorization page' 
+  @ApiResponse({
+    status: 302,
+    description: 'Redirects to 42 OAuth authorization page',
   })
   async fortyTwoAuth() {
     // This route initiates the OAuth flow
@@ -121,18 +115,18 @@ export class AuthController {
   @Get('42/callback')
   @UseGuards(FortyTwoAuthGuard)
   @ApiOperation({ summary: '42 OAuth callback' })
-  @ApiResponse({ 
-    status: 302, 
-    description: 'OAuth callback, redirects to frontend with token' 
+  @ApiResponse({
+    status: 302,
+    description: 'OAuth callback, redirects to frontend with token',
   })
   async fortyTwoCallback(@Req() req: Request, @Res() res: Response) {
     const user = req.user;
     const authResponse = await this.authService.loginWithFortyTwo(user);
-    
+
     // Redirect to frontend with the token
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const redirectUrl = `${frontendUrl}/auth/callback?token=${authResponse.access_token}`;
-    
+
     return res.redirect(redirectUrl);
   }
 
@@ -141,9 +135,9 @@ export class AuthController {
   @Get('google')
   @UseGuards(GoogleAuthGuard)
   @ApiOperation({ summary: 'Initiate Google OAuth login' })
-  @ApiResponse({ 
-    status: 302, 
-    description: 'Redirects to Google OAuth authorization page' 
+  @ApiResponse({
+    status: 302,
+    description: 'Redirects to Google OAuth authorization page',
   })
   async googleAuth() {
     // This route initiates the OAuth flow
@@ -153,18 +147,18 @@ export class AuthController {
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
   @ApiOperation({ summary: 'Google OAuth callback' })
-  @ApiResponse({ 
-    status: 302, 
-    description: 'OAuth callback, redirects to frontend with token' 
+  @ApiResponse({
+    status: 302,
+    description: 'OAuth callback, redirects to frontend with token',
   })
   async googleCallback(@Req() req: Request, @Res() res: Response) {
     const user = req.user;
     const authResponse = await this.authService.loginWithGoogle(user);
-    
+
     // Redirect to frontend with the token
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const redirectUrl = `${frontendUrl}/auth/callback?token=${authResponse.access_token}`;
-    
+
     return res.redirect(redirectUrl);
   }
 }

@@ -11,19 +11,10 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CommentsService } from './comments.service';
-import {
-  CommentResponseDto,
-  CreateCommentDto,
-  UpdateCommentDto,
-} from './dto';
+import { CommentResponseDto, CreateCommentDto, UpdateCommentDto } from './dto';
 
 @ApiTags('comments')
 @Controller('comments')
@@ -54,9 +45,7 @@ export class CommentsController {
     description: 'Comments retrieved successfully',
     type: [CommentResponseDto],
   })
-  async findByMovie(
-    @Param('imdbId') imdbId: string,
-  ): Promise<CommentResponseDto[]> {
+  async findByMovie(@Param('imdbId') imdbId: string): Promise<CommentResponseDto[]> {
     return this.commentsService.findByMovie(imdbId);
   }
 

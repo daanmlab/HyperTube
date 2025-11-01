@@ -1,13 +1,7 @@
 import { apiClient } from '@/api/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Film, Play, RefreshCw, Search } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useState } from 'react';
@@ -88,9 +82,7 @@ export const MovieList: React.FC = () => {
       case 'transcoding': {
         // Show per-quality progress if available
         if (movie.currentQuality && movie.currentQualityProgress) {
-          const qualityProgress = parseFloat(
-            movie.currentQualityProgress || '0'
-          ).toFixed(0);
+          const qualityProgress = parseFloat(movie.currentQualityProgress || '0').toFixed(0);
           const streamText = movie.canStream ? ' (Streaming available!)' : '';
           return `Transcoding ${movie.currentQuality} - ${qualityProgress}%${streamText}`;
         }
@@ -110,9 +102,7 @@ export const MovieList: React.FC = () => {
         return `Transcoding ${transcodeQuality} - ${progress}%${streamText}`;
       }
       case 'downloading': {
-        const downloadProgress = parseFloat(
-          movie.downloadProgress || '0'
-        ).toFixed(0);
+        const downloadProgress = parseFloat(movie.downloadProgress || '0').toFixed(0);
         return `Downloading ${downloadProgress}%`;
       }
       case 'error':
@@ -137,9 +127,7 @@ export const MovieList: React.FC = () => {
                 <Film className="h-5 w-5" />
                 Movie Library
               </CardTitle>
-              <CardDescription>
-                Your downloaded movies ready to stream
-              </CardDescription>
+              <CardDescription>Your downloaded movies ready to stream</CardDescription>
             </div>
             <Button
               variant="outline"
@@ -148,9 +136,7 @@ export const MovieList: React.FC = () => {
               disabled={isLoading}
               className="flex items-center gap-2"
             >
-              <RefreshCw
-                className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`}
-              />
+              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
           </div>
@@ -159,12 +145,8 @@ export const MovieList: React.FC = () => {
           {movies.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Film className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="text-lg font-medium mb-2">
-                No movies in your library yet
-              </p>
-              <p className="text-sm mb-4">
-                Search and download movies to get started
-              </p>
+              <p className="text-lg font-medium mb-2">No movies in your library yet</p>
+              <p className="text-sm mb-4">Search and download movies to get started</p>
               <Button
                 onClick={() => navigate('/search')}
                 className="flex items-center gap-2 mx-auto"
@@ -175,7 +157,7 @@ export const MovieList: React.FC = () => {
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {movies.map(movie => (
+              {movies.map((movie) => (
                 <Card key={movie.imdbId} className="overflow-hidden">
                   <div className="aspect-[2/3] relative">
                     <img
@@ -184,15 +166,11 @@ export const MovieList: React.FC = () => {
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute top-2 right-2">
-                      <Badge className={getStatusColor(movie.status)}>
-                        {movie.status}
-                      </Badge>
+                      <Badge className={getStatusColor(movie.status)}>{movie.status}</Badge>
                     </div>
                   </div>
                   <CardContent className="p-4">
-                    <h3 className="font-bold text-lg mb-1 truncate">
-                      {movie.title}
-                    </h3>
+                    <h3 className="font-bold text-lg mb-1 truncate">{movie.title}</h3>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                       <span>{movie.year}</span>
                       <span>•</span>
@@ -210,11 +188,8 @@ export const MovieList: React.FC = () => {
                     <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
                       {movie.synopsis}
                     </p>
-                    <div className="text-xs text-muted-foreground mb-3">
-                      {getStatusText(movie)}
-                    </div>
-                    {(movie.status === 'downloading' ||
-                      movie.status === 'transcoding') && (
+                    <div className="text-xs text-muted-foreground mb-3">{getStatusText(movie)}</div>
+                    {(movie.status === 'downloading' || movie.status === 'transcoding') && (
                       <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
                         <div
                           className="bg-blue-600 h-2 rounded-full transition-all"

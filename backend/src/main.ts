@@ -16,7 +16,7 @@ async function bootstrap() {
       transformOptions: {
         enableImplicitConversion: true,
       },
-    })
+    }),
   );
 
   // Swagger configuration

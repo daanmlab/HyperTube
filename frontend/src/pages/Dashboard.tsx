@@ -1,12 +1,6 @@
 import { MovieList } from '@/components/MovieList';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { VideoList } from '@/components/VideoList';
 import { VideoUpload } from '@/components/VideoUpload';
 import { useAuth } from '@/contexts/AuthContext';
@@ -25,15 +19,13 @@ export const Dashboard: React.FC = () => {
 
   const handleVideoUploaded = (videoId: string) => {
     // Track uploaded videos in localStorage
-    const uploadedVideos = JSON.parse(
-      localStorage.getItem('uploadedVideos') || '[]'
-    );
+    const uploadedVideos = JSON.parse(localStorage.getItem('uploadedVideos') || '[]');
     if (!uploadedVideos.includes(videoId)) {
       uploadedVideos.push(videoId);
       localStorage.setItem('uploadedVideos', JSON.stringify(uploadedVideos));
     }
     // Trigger refresh of video list
-    setRefreshTrigger(prev => prev + 1);
+    setRefreshTrigger((prev) => prev + 1);
   };
 
   return (
@@ -41,26 +33,15 @@ export const Dashboard: React.FC = () => {
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold">
-              Welcome back, {user.firstName}!
-            </h1>
-            <p className="text-muted-foreground">
-              Here's your HyperTube dashboard
-            </p>
+            <h1 className="text-3xl font-bold">Welcome back, {user.firstName}!</h1>
+            <p className="text-muted-foreground">Here's your HyperTube dashboard</p>
           </div>
           <div className="flex gap-2">
-            <Button
-              onClick={() => navigate('/search')}
-              className="flex items-center gap-2"
-            >
+            <Button onClick={() => navigate('/search')} className="flex items-center gap-2">
               <Search className="h-4 w-4" />
               Search Movies
             </Button>
-            <Button
-              variant="outline"
-              onClick={logout}
-              className="flex items-center gap-2"
-            >
+            <Button variant="outline" onClick={logout} className="flex items-center gap-2">
               <LogOut className="h-4 w-4" />
               Sign Out
             </Button>
@@ -94,9 +75,7 @@ export const Dashboard: React.FC = () => {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Member Since
-              </CardTitle>
+              <CardTitle className="text-sm font-medium">Member Since</CardTitle>
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>

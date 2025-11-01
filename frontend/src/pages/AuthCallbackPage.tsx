@@ -9,7 +9,7 @@ export const AuthCallbackPage: React.FC = () => {
 
   useEffect(() => {
     const token = searchParams.get('token');
-    
+
     if (token) {
       // Store the token and redirect to dashboard
       loginWithToken(token);
