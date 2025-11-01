@@ -261,13 +261,19 @@ export class MoviesService {
 
     // Dynamically generate master playlist based on available quality variants
     const qualities = [
+      { name: '360p', bandwidth: 800000, resolution: '640x360' },
       { name: '480p', bandwidth: 1000000, resolution: '854x480' },
       { name: '720p', bandwidth: 2000000, resolution: '1280x720' },
+      { name: '1080p', bandwidth: 5000000, resolution: '1920x1080' },
+      { name: '1440p', bandwidth: 10000000, resolution: '2560x1440' },
+      { name: '2160p', bandwidth: 20000000, resolution: '3840x2160' },
     ];
 
     const availableQualities = qualities.filter(q => {
       const playlistPath = path.join(hlsPath, `output_${q.name}.m3u8`);
-      return fs.existsSync(playlistPath);
+      const exists = fs.existsSync(playlistPath);
+      console.log(`Checking ${q.name} at ${playlistPath}: ${exists}`);
+      return exists;
     });
 
     if (availableQualities.length === 0) {
