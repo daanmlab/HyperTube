@@ -22,9 +22,13 @@ interface Movie {
   imageUrl: string;
   rating: string;
   status: 'pending' | 'downloading' | 'transcoding' | 'ready' | 'error';
+  canStream?: boolean; // NEW: Indicates if enough segments are available for streaming
   downloadProgress: string;
   transcodeProgress: string;
   selectedQuality: string;
+  currentQuality?: string;
+  currentQualityProgress?: string;
+  errorMessage?: string; // Error message if status is 'error'
 }
 
 interface MovieListProps {
@@ -80,28 +84,46 @@ export const MovieList: React.FC = () => {
     switch (movie.status) {
       case 'ready':
         return 'Ready to stream';
-      case 'transcoding':
-        // Show detailed transcoding info with quality
+      case 'transcoding': {
+        // Show per-quality progress if available
+        if (movie.currentQuality && movie.currentQualityProgress) {
+          const qualityProgress = parseFloat(movie.currentQualityProgress || '0').toFixed(0);
+          const streamText = movie.canStream ? ' (Streaming available!)' : '';
+          return `Transcoding ${movie.currentQuality} - ${qualityProgress}%${streamText}`;
+        }
+        
+        // Fallback to old behavior
         const progress = parseFloat(movie.transcodeProgress || '0').toFixed(0);
-        const quality = movie.selectedQuality || '';
-        return `Transcoding ${quality ? quality + ' - ' : ''}${progress}%`;
-      case 'downloading':
+        const currentProgress = parseFloat(progress);
+        let transcodeQuality = '';
+        
+        if (currentProgress < 50) {
+          transcodeQuality = '480p'; // First half = 480p
+        } else {
+          transcodeQuality = '720p'; // Second half = 720p
+        }
+        
+        const streamText = movie.canStream ? ' (Streaming available!)' : '';
+        return `Transcoding ${transcodeQuality} - ${progress}%${streamText}`;
+      }
+      case 'downloading': {
         const downloadProgress = parseFloat(
           movie.downloadProgress || '0'
         ).toFixed(0);
         return `Downloading ${downloadProgress}%`;
+      }
       case 'error':
-        return 'Error';
+        return movie.errorMessage || 'Error processing video';
       default:
         return movie.status;
     }
   };
 
   const isPlayable = (movie: Movie) => {
+    // Allow streaming if movie is ready OR if canStream flag is true (progressive streaming)
     return (
       movie.status === 'ready' ||
-      (movie.status === 'transcoding' &&
-        parseFloat(movie.transcodeProgress) > 0)
+      movie.canStream === true
     );
   };
 

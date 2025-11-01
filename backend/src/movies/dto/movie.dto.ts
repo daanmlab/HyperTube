@@ -34,6 +34,13 @@ export class MovieDto {
   })
   status: 'downloading' | 'transcoding' | 'ready' | 'error';
 
+  @ApiProperty({ 
+    required: false, 
+    example: true,
+    description: 'Whether the movie can be streamed (enough segments buffered)' 
+  })
+  canStream?: boolean;
+
   @ApiProperty({ required: false })
   ariaGid?: string;
 
@@ -60,6 +67,12 @@ export class MovieDto {
 
   @ApiProperty({ required: false })
   transcodeProgress?: string;
+
+  @ApiProperty({ required: false, example: '480p' })
+  currentQuality?: string;
+
+  @ApiProperty({ required: false, example: '6' })
+  currentQualityProgress?: string;
 
   @ApiProperty({ required: false, isArray: true, type: String })
   availableQualities?: string[];

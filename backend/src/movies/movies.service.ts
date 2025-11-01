@@ -1,10 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Response } from 'express';
+import type { Repository } from 'typeorm';
+import type { Response } from 'express';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import Redis from 'ioredis';
 import * as fs from 'fs';
 import * as path from 'path';
-import { Movie, MovieStatus, TorrentQuality } from '../entities/movie.entity';
+import { Movie, MovieStatus, type TorrentQuality } from '../entities/movie.entity';
 
 export interface CreateMovieDto {
   imdbId: string;
@@ -24,10 +26,54 @@ export interface CreateMovieDto {
 
 @Injectable()
 export class MoviesService {
+  private redis: Redis;
+
   constructor(
     @InjectRepository(Movie)
     private movieRepository: Repository<Movie>,
-  ) {}
+  ) {
+    this.redis = new Redis({
+      host: process.env.REDIS_HOST || 'localhost',
+      port: Number.parseInt(process.env.REDIS_PORT || '6379'),
+    });
+  }
+
+  @Cron(CronExpression.EVERY_5_SECONDS, { name: 'syncTranscodeStatus' })
+  async syncTranscodeStatusFromRedis() {
+    // Get all movies that are currently transcoding
+    const transcodingMovies = await this.movieRepository.find({
+      where: { status: MovieStatus.TRANSCODING },
+    });
+
+    for (const movie of transcodingMovies) {
+      try {
+        const redisKey = `video_status:${movie.imdbId}`;
+        const statusData = await this.redis.get(redisKey);
+
+        if (statusData) {
+          const status = JSON.parse(statusData);
+
+          // Update movie with Redis status
+          if (status.status === 'error') {
+            movie.status = MovieStatus.ERROR;
+            movie.errorMessage = status.error || status.message || 'Transcoding failed';
+            await this.movieRepository.save(movie);
+            console.log(`[SYNC] Updated ${movie.imdbId} to error status: ${movie.errorMessage}`);
+          } else if (status.status === 'complete') {
+            movie.status = MovieStatus.READY;
+            movie.transcodeProgress = 100;
+            await this.movieRepository.save(movie);
+            console.log(`[SYNC] Updated ${movie.imdbId} to ready status`);
+          } else if (status.progress !== undefined) {
+            movie.transcodeProgress = status.progress;
+            await this.movieRepository.save(movie);
+          }
+        }
+      } catch (error) {
+        console.error(`[SYNC] Error syncing status for ${movie.imdbId}:`, error);
+      }
+    }
+  }
 
   async createMovie(createMovieDto: CreateMovieDto): Promise<Movie> {
     const existingMovie = await this.movieRepository.findOne({
@@ -191,15 +237,34 @@ export class MoviesService {
     }
 
     const hlsPath = this.getMovieHlsPath(imdbId);
-    const masterPath = path.join(hlsPath, 'master.m3u8');
 
-    if (!fs.existsSync(masterPath)) {
-      throw new NotFoundException('Master playlist not found - movie may still be transcoding');
+    // Dynamically generate master playlist based on available quality variants
+    const qualities = [
+      { name: '480p', bandwidth: 1000000, resolution: '854x480' },
+      { name: '720p', bandwidth: 2000000, resolution: '1280x720' },
+    ];
+
+    const availableQualities = qualities.filter(q => {
+      const playlistPath = path.join(hlsPath, `output_${q.name}.m3u8`);
+      return fs.existsSync(playlistPath);
+    });
+
+    if (availableQualities.length === 0) {
+      throw new NotFoundException('No quality variants available yet - movie may still be transcoding');
+    }
+
+    // Generate HLS master playlist dynamically
+    let masterPlaylist = '#EXTM3U\n#EXT-X-VERSION:3\n\n';
+
+    for (const quality of availableQualities) {
+      masterPlaylist += `#EXT-X-STREAM-INF:BANDWIDTH=${quality.bandwidth},RESOLUTION=${quality.resolution}\n`;
+      masterPlaylist += `output_${quality.name}.m3u8\n\n`;
     }
 
     res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.sendFile(masterPath);
+    res.setHeader('Cache-Control', 'no-cache'); // Don't cache during transcoding
+    res.send(masterPlaylist);
   }
 
   async getOutputPlaylist(imdbId: string, quality: string, res: Response): Promise<void> {

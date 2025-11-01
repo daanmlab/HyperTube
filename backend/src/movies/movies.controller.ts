@@ -288,6 +288,9 @@ export class MoviesController {
 
     return movies.map(movie => {
       let transcodeProgress = movie.transcodeProgress?.toString() || '0';
+      let currentQuality = '';
+      let currentQualityProgress = 0;
+      let canStream = false; // Flag to indicate if enough segments are available for streaming
 
       // Calculate accurate progress for transcoding movies
       if (movie.status === 'transcoding') {
@@ -297,27 +300,71 @@ export class MoviesController {
           if (fs.existsSync(hlsDir)) {
             const qualities = ['480p', '720p'];
             let totalProgress = 0;
+            const minSegmentsForStreaming = 30; // ~5 minutes at 10s/segment (adjustable)
+            
+            // Try to read metadata to get actual duration
+            const metadataPath = path.join(hlsDir, 'metadata.json');
+            let videoDuration = 11558; // Default ~3hr video duration in seconds
+            let segmentTime = 10; // Updated to 10 seconds to match worker settings
+            
+            if (fs.existsSync(metadataPath)) {
+              try {
+                const metadataContent = fs.readFileSync(metadataPath, 'utf8');
+                const metadata = JSON.parse(metadataContent);
+                if (metadata.duration) {
+                  videoDuration = metadata.duration;
+                }
+              } catch (err) {
+                console.log(`[PROGRESS] Could not read metadata, using defaults`);
+              }
+            }
+            
+            const expectedSegments = Math.ceil(videoDuration / segmentTime);
+            console.log(`[PROGRESS] ${movie.imdbId} - Expected segments: ${expectedSegments} (duration: ${videoDuration}s, segment: ${segmentTime}s)`);
 
             for (let i = 0; i < qualities.length; i++) {
               const quality = qualities[i];
               const pattern = path.join(hlsDir, `output_${quality}_*.ts`);
+              const playlistPath = path.join(hlsDir, `output_${quality}.m3u8`);
 
               try {
                 const result = execSync(`ls -1 ${pattern} 2>/dev/null | wc -l`);
                 const segmentCount = result.toString().trim();
                 const currentSegments = parseInt(segmentCount) || 0;
 
+                // Check if this quality is actually complete by checking for EXT-X-ENDLIST in playlist
+                let isQualityComplete = false;
+                if (fs.existsSync(playlistPath)) {
+                  try {
+                    const playlistContent = fs.readFileSync(playlistPath, 'utf8');
+                    isQualityComplete = playlistContent.includes('#EXT-X-ENDLIST');
+                  } catch {}
+                }
+
                 console.log(
-                  `[PROGRESS] ${movie.imdbId} - ${quality}: ${currentSegments} segments`
+                  `[PROGRESS] ${movie.imdbId} - ${quality}: ${currentSegments} segments${isQualityComplete ? ' (COMPLETE)' : ''}`
                 );
 
+                // Check if we have enough segments for streaming (at least one quality)
+                if (currentSegments >= minSegmentsForStreaming && !canStream) {
+                  canStream = true;
+                  console.log(
+                    `[STREAMING] ${movie.imdbId} - ${quality} has ${currentSegments} segments, streaming enabled!`
+                  );
+                }
+
                 if (currentSegments > 0) {
-                  const expectedSegments = 2889; // ~3hr video with 4s segments
                   const qualityWeight = 50;
-                  const qualityProgress = Math.min(
+                  let qualityProgress = Math.min(
                     100,
                     (currentSegments / expectedSegments) * 100
                   );
+                  
+                  // If quality is complete, set progress to 100%
+                  if (isQualityComplete) {
+                    qualityProgress = 100;
+                  }
+
                   const weightedProgress =
                     (qualityProgress * qualityWeight) / 100;
 
@@ -331,8 +378,19 @@ export class MoviesController {
 
                   totalProgress += weightedProgress;
 
-                  if (qualityProgress < 100) {
-                    break;
+                  // Track the current quality being transcoded
+                  // Don't break if quality is complete - continue to next quality
+                  if (!isQualityComplete && currentSegments > 0) {
+                    currentQuality = quality;
+                    currentQualityProgress = Math.round(qualityProgress);
+                    // Don't break - we want to check all qualities
+                  } else if (isQualityComplete) {
+                    // Quality is complete, continue to next quality
+                    if (i === qualities.length - 1) {
+                      // Last quality completed
+                      currentQuality = quality;
+                      currentQualityProgress = 100;
+                    }
                   }
                 }
               } catch (err) {
@@ -347,7 +405,7 @@ export class MoviesController {
             if (totalProgress > 0) {
               transcodeProgress = Math.round(totalProgress).toString();
               console.log(
-                `[PROGRESS] ${movie.imdbId} - Final progress: ${transcodeProgress}%`
+                `[PROGRESS] ${movie.imdbId} - Final progress: ${transcodeProgress}% (${currentQuality} at ${currentQualityProgress}%)`
               );
             }
           } else {
@@ -374,6 +432,7 @@ export class MoviesController {
         rating: movie.rating?.toString(),
         trailerUrl: movie.trailerUrl,
         status: movie.status as any,
+        canStream: canStream, // NEW: Indicates if streaming is available
         ariaGid: movie.ariaGid,
         magnetUrl: movie.magnetUrl,
         selectedQuality: movie.selectedQuality,
@@ -383,6 +442,8 @@ export class MoviesController {
         downloadPath: movie.downloadPath,
         videoPath: movie.videoPath,
         transcodeProgress: transcodeProgress,
+        currentQuality: currentQuality || undefined,
+        currentQualityProgress: currentQualityProgress > 0 ? currentQualityProgress.toString() : undefined,
         availableQualities: this.safeJsonParse(movie.availableQualities),
         metadata: movie.metadata,
         errorMessage: movie.errorMessage,

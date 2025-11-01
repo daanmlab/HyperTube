@@ -1,12 +1,13 @@
 import axios from 'axios';
-import { exec } from 'child_process';
 import * as fs from 'fs';
+import ffmpeg from 'fluent-ffmpeg';
+import type { FfprobeData } from 'fluent-ffmpeg';
 import Redis from 'ioredis';
 import * as path from 'path';
 import { promisify } from 'util';
 import { MovieDownloadMonitor } from './movie-monitor';
 
-const execAsync = promisify(exec);
+const execAsync = promisify(require('child_process').exec);
 
 interface QualityLevel {
   name: string;
@@ -91,7 +92,7 @@ class VideoTranscoder {
     });
   }
 
-  async updateStatus(videoId: string, status: any) {
+  async updateStatus(videoId: string, status: Record<string, unknown>) {
     try {
       await this.redis.set(`video_status:${videoId}`, JSON.stringify(status));
     } catch (error) {
@@ -100,115 +101,169 @@ class VideoTranscoder {
   }
 
   async analyzeVideo(inputPath: string): Promise<VideoMetadata | null> {
-    try {
-      console.log('[TRANSCODER] Analyzing video metadata...');
+    return new Promise((resolve, reject) => {
+      ffmpeg.ffprobe(inputPath, (err, metadata: FfprobeData) => {
+        if (err) {
+          const errorMsg = err.message || String(err);
+          if (errorMsg.includes('moov atom not found')) {
+            reject(new Error('Video file is corrupted: MP4 metadata (moov atom) not found. The download may be incomplete.'));
+          } else if (errorMsg.includes('Invalid data')) {
+            reject(new Error('Video file contains invalid data. The file may be corrupted or incomplete.'));
+          } else if (errorMsg.includes('No such file')) {
+            reject(new Error(`Video file not found: ${inputPath}`));
+          } else {
+            reject(new Error(`Failed to analyze video: ${errorMsg}`));
+          }
+          return;
+        }
 
-      const command = `ffprobe -v quiet -print_format json -show_format -show_streams "${inputPath}"`;
-      const { stdout } = await execAsync(command);
-      const data = JSON.parse(stdout);
+        const videoStream = metadata.streams.find(
+          s => s.codec_type === 'video'
+        );
+        const audioStream = metadata.streams.find(
+          s => s.codec_type === 'audio'
+        );
 
-      const videoStream = data.streams.find(
-        (s: any) => s.codec_type === 'video'
-      );
-      const audioStream = data.streams.find(
-        (s: any) => s.codec_type === 'audio'
-      );
+        if (!videoStream) {
+          reject(new Error('No video stream found in file - file may be corrupted or is not a valid video'));
+          return;
+        }
 
-      if (!videoStream) {
-        throw new Error('No video stream found');
-      }
+        let fps = 0;
+        if (videoStream.r_frame_rate) {
+          const [num, den] = videoStream.r_frame_rate.split('/').map(Number);
+          fps = den ? num / den : 0;
+        }
 
-      const metadata: VideoMetadata = {
-        duration: parseFloat(data.format.duration) || 0,
-        width: videoStream.width || 0,
-        height: videoStream.height || 0,
-        bitrate: parseInt(data.format.bit_rate) || 0,
-        fps: eval(videoStream.r_frame_rate) || 0,
-        codec: videoStream.codec_name || 'unknown',
-        audioCodec: audioStream?.codec_name || 'none',
-        fileSize: parseInt(data.format.size) || 0,
-      };
+        const result: VideoMetadata = {
+          duration: typeof metadata.format.duration === 'string' 
+            ? parseFloat(metadata.format.duration) 
+            : (metadata.format.duration || 0),
+          width: videoStream.width || 0,
+          height: videoStream.height || 0,
+          bitrate: typeof metadata.format.bit_rate === 'string'
+            ? parseInt(metadata.format.bit_rate)
+            : (metadata.format.bit_rate || 0),
+          fps,
+          codec: videoStream.codec_name || 'unknown',
+          audioCodec: audioStream?.codec_name || 'none',
+          fileSize: typeof metadata.format.size === 'string'
+            ? parseInt(metadata.format.size)
+            : (metadata.format.size || 0),
+        };
 
-      console.log('[TRANSCODER] Video analysis complete:', metadata);
-      return metadata;
-    } catch (error) {
-      console.error('[TRANSCODER] Error analyzing video:', error);
-      return null;
-    }
+        console.log('[TRANSCODER] Video analysis complete:', result);
+        resolve(result);
+      });
+    });
   }
 
   async transcodeQuality(
     inputPath: string,
     outputDir: string,
     quality: QualityLevel,
-    options: any,
+    options: Record<string, unknown>,
     metadata: VideoMetadata,
     videoId: string,
     qualityIndex: number,
     totalQualities: number
   ): Promise<boolean> {
-    try {
+    return new Promise((resolve, reject) => {
       console.log(`[TRANSCODER] Transcoding ${quality.name}...`);
 
-      // Determine if we need to scale down
-      const shouldScale =
-        metadata.width > quality.width || metadata.height > quality.height;
-      const scaleFilter = shouldScale
-        ? `-vf scale=${quality.width}:${quality.height}:force_original_aspect_ratio=decrease:force_divisible_by=2`
-        : '';
-
-      const segmentTime = options.segmentTime || 10;
+      const segmentTime = (options.segmentTime as number) || 10;
       const expectedSegments = Math.ceil(metadata.duration / segmentTime);
 
-      const command = [
-        'ffmpeg',
-        '-i',
-        `"${inputPath}"`,
-        '-c:v',
-        options.videoCodec || 'libx264',
-        '-preset',
-        options.preset || 'fast',
-        '-crf',
-        options.crf || 23,
-        '-c:a',
-        options.audioCodec || 'aac',
-        '-b:v',
-        quality.videoBitrate,
-        '-b:a',
-        quality.audioBitrate,
-        '-maxrate',
-        quality.videoBitrate,
-        '-bufsize',
-        `${parseInt(quality.videoBitrate) * 2}k`,
-        scaleFilter,
-        '-hls_time',
-        segmentTime,
-        '-hls_playlist_type',
-        'vod',
-        '-hls_segment_filename',
-        `"${outputDir}/output${quality.suffix}_%03d.ts"`,
-        '-f',
-        'hls',
-        `"${outputDir}/output${quality.suffix}.m3u8"`,
-      ]
-        .filter(Boolean)
-        .join(' ');
+      const shouldScale =
+        metadata.width > quality.width || metadata.height > quality.height;
 
-      // Start ffmpeg in background and monitor progress
-      const child = exec(command);
+      const useHardwareAccel = options.hardwareAccel !== false;
+      let videoCodec = (options.videoCodec as string) || 'libx264';
+      let useVAAPI = false;
+
+      if (useHardwareAccel && !options.videoCodec) {
+        try {
+          if (fs.existsSync('/dev/dri/renderD128')) {
+            videoCodec = 'h264_vaapi';
+            useVAAPI = true;
+            console.log('[TRANSCODER] Using VAAPI hardware acceleration');
+          }
+        } catch {
+          console.log('[TRANSCODER] Hardware acceleration not available, using optimized software encoding');
+        }
+      }
+
+      const outputPath = path.join(outputDir, `output${quality.suffix}.m3u8`);
+      const segmentPath = path.join(outputDir, `output${quality.suffix}_%03d.ts`);
+
+      let command = ffmpeg(inputPath);
+
+      // Add threading optimizations for faster encoding
+      command = command
+        .outputOptions(['-threads 0']) // Use all available CPU cores
+        .inputOptions(['-threads 0']); // Use all cores for decoding too
+
+      // Add VAAPI hardware acceleration if available
+      if (useVAAPI) {
+        command = command
+          .inputOptions(['-vaapi_device /dev/dri/renderD128'])
+          .outputOptions(['-vf format=nv12,hwupload']);
+      }
+
+      // Video codec and settings
+      command = command.videoCodec(videoCodec);
+
+      if (videoCodec === 'libx264') {
+        command = command
+          .addOption('-preset', (options.preset as string) || 'veryfast')
+          .addOption('-crf', ((options.crf as number) || 28).toString())
+          .addOption('-tune', 'fastdecode')
+          .addOption('-profile:v', 'main')
+          .addOption('-level', '4.0')
+          .addOption('-pix_fmt', 'yuv420p');
+      } else if (useVAAPI) {
+        command = command.addOption('-qp', '28');
+      }
+
+      // Video bitrate and scaling
+      command = command.videoBitrate(quality.videoBitrate);
+
+      if (shouldScale && !useVAAPI) {
+        command = command.size(`${quality.width}x${quality.height}`);
+      } else if (shouldScale && useVAAPI) {
+        command = command.outputOptions([
+          `-vf scale_vaapi=w=${quality.width}:h=${quality.height}`
+        ]);
+      }
+
+      command = command
+        .audioCodec((options.audioCodec as string) || 'aac')
+        .audioBitrate(quality.audioBitrate)
+        .audioChannels(2)
+        .audioFrequency(44100);
+
+      command = command
+        .outputOptions([
+          `-hls_time ${segmentTime}`,
+          '-hls_playlist_type event',
+          `-hls_segment_filename ${segmentPath}`,
+          '-hls_flags independent_segments+append_list',
+          '-f hls',
+          '-movflags +faststart'
+        ])
+        .output(outputPath);
 
       // Monitor segment creation for progress updates
       const progressInterval = setInterval(async () => {
         try {
-          const pattern = `${outputDir}/output${quality.suffix}_*.ts`;
+          const pattern = path.join(outputDir, `output${quality.suffix}_*.ts`);
           const { stdout } = await execAsync(
             `ls -1 ${pattern} 2>/dev/null | wc -l`
           );
           const currentSegments = parseInt(stdout.trim()) || 0;
 
           if (currentSegments > 0 && expectedSegments > 0) {
-            // Calculate progress within this quality's portion (each quality gets equal weight)
-            const qualityProgressPortion = 70 / totalQualities; // 70% total for all qualities
+            const qualityProgressPortion = 70 / totalQualities;
             const baseProgress = 10 + qualityIndex * qualityProgressPortion;
             const currentQualityProgress =
               (currentSegments / expectedSegments) * qualityProgressPortion;
@@ -224,33 +279,30 @@ class VideoTranscoder {
               metadata,
             });
           }
-        } catch (err) {
-          // Ignore errors during progress check
+        } catch {
         }
-      }, 5000); // Check every 5 seconds
+      }, 5000);
 
-      // Wait for ffmpeg to complete
-      await new Promise((resolve, reject) => {
-        child.on('exit', code => {
-          clearInterval(progressInterval);
-          if (code === 0) {
-            resolve(true);
-          } else {
-            reject(new Error(`ffmpeg exited with code ${code}`));
-          }
-        });
-        child.on('error', err => {
-          clearInterval(progressInterval);
-          reject(err);
-        });
+      command.on('progress', (progress) => {
+        if (progress.percent) {
+          console.log(`[TRANSCODER] ${quality.name}: ${Math.round(progress.percent)}%`);
+        }
       });
 
-      console.log(`[TRANSCODER] ${quality.name} transcoding complete`);
-      return true;
-    } catch (error) {
-      console.error(`[TRANSCODER] Error transcoding ${quality.name}:`, error);
-      return false;
-    }
+      command.on('end', () => {
+        clearInterval(progressInterval);
+        console.log(`[TRANSCODER] ${quality.name} transcoding complete`);
+        resolve(true);
+      });
+
+      command.on('error', (err) => {
+        clearInterval(progressInterval);
+        console.error(`[TRANSCODER] Error transcoding ${quality.name}:`, err);
+        reject(err);
+      });
+
+      command.run();
+    });
   }
 
   async generateMasterPlaylist(
@@ -302,8 +354,10 @@ class VideoTranscoder {
       fs.mkdirSync(thumbnailDir, { recursive: true });
 
       const duration = metadata.duration;
-      const count = Math.min(10, Math.max(3, Math.floor(duration / 30))); // 3-10 thumbnails
+      const count = Math.min(10, Math.max(3, Math.floor(duration / 30)));
 
+      const promises = [];
+      
       for (let i = 0; i < count; i++) {
         const timestamp = (duration / count) * i;
         const outputPath = path.join(
@@ -311,23 +365,23 @@ class VideoTranscoder {
           `thumb_${i.toString().padStart(3, '0')}.png`
         );
 
-        const command = [
-          'ffmpeg',
-          '-ss',
-          timestamp.toString(),
-          '-i',
-          `"${inputPath}"`,
-          '-vframes',
-          '1',
-          '-vf',
-          'scale=320:180:force_original_aspect_ratio=decrease',
-          '-y',
-          `"${outputPath}"`,
-        ].join(' ');
+        const promise = new Promise<void>((resolve, reject) => {
+          ffmpeg(inputPath)
+            .seekInput(timestamp)
+            .outputOptions([
+              '-vframes 1',
+              '-vf scale=320:180:force_original_aspect_ratio=decrease'
+            ])
+            .output(outputPath)
+            .on('end', () => resolve())
+            .on('error', (err) => reject(err))
+            .run();
+        });
 
-        await execAsync(command);
+        promises.push(promise);
       }
 
+      await Promise.all(promises);
       console.log(`[TRANSCODER] Generated ${count} thumbnails`);
     } catch (error) {
       console.error('[TRANSCODER] Error generating thumbnails:', error);
@@ -341,6 +395,7 @@ class VideoTranscoder {
       console.log(
         `[TRANSCODER] Starting transcoding job for video: ${videoId}`
       );
+      console.log(`[TRANSCODER] Input file: ${inputPath}`);
 
       await this.updateStatus(videoId, {
         status: 'processing',
@@ -349,13 +404,44 @@ class VideoTranscoder {
         startTime: new Date().toISOString(),
       });
 
+      // Validate input file exists before proceeding
+      if (!fs.existsSync(inputPath)) {
+        throw new Error(`Input video file not found: ${inputPath}`);
+      }
+
+      try {
+        fs.accessSync(inputPath, fs.constants.R_OK);
+      } catch {
+        throw new Error(`Input video file is not readable: ${inputPath}`);
+      }
+
+      const stats = fs.statSync(inputPath);
+      if (stats.size === 0) {
+        throw new Error(`Input video file is empty: ${inputPath}`);
+      }
+
+      console.log(`[TRANSCODER] Input file validated: ${stats.size} bytes`);
+
       fs.mkdirSync(outputDir, { recursive: true });
 
       // Analyze video
+      console.log(`[TRANSCODER] Analyzing video: ${inputPath}`);
       const metadata = await this.analyzeVideo(inputPath);
       if (!metadata) {
-        throw new Error('Failed to analyze video');
+        throw new Error('Failed to analyze video - metadata is null');
       }
+
+      // Validate metadata
+      if (!metadata.duration || metadata.duration <= 0) {
+        throw new Error(`Invalid video duration: ${metadata.duration}s - file may be corrupted`);
+      }
+      if (!metadata.width || !metadata.height) {
+        throw new Error('Invalid video dimensions - file may be corrupted');
+      }
+
+      const metadataPath = path.join(outputDir, 'metadata.json');
+      fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
+      console.log(`[TRANSCODER] Metadata saved to ${metadataPath}`);
 
       await this.updateStatus(videoId, {
         status: 'processing',
@@ -367,7 +453,6 @@ class VideoTranscoder {
       const qualities = options.qualities || DEFAULT_QUALITIES;
       const successfulQualities: QualityLevel[] = [];
 
-      // Transcode each quality level
       for (let i = 0; i < qualities.length; i++) {
         const quality = qualities[i];
 
@@ -391,7 +476,6 @@ class VideoTranscoder {
         if (success) {
           successfulQualities.push(quality);
 
-          // Mark as ready after first successful quality
           if (successfulQualities.length === 1) {
             await this.updateStatus(videoId, {
               status: 'ready',
@@ -429,7 +513,6 @@ class VideoTranscoder {
 
       await this.generateMasterPlaylist(outputDir, successfulQualities);
 
-      // Generate thumbnails if enabled
       if (options.enableThumbnails) {
         await this.updateStatus(videoId, {
           status: 'processing',
@@ -441,7 +524,6 @@ class VideoTranscoder {
         await this.generateThumbnails(inputPath, outputDir, metadata);
       }
 
-      // Final status update
       await this.updateStatus(videoId, {
         status: 'ready',
         progress: 100,
@@ -469,7 +551,6 @@ class VideoTranscoder {
   }
 }
 
-// Main worker loop
 let monitor: MovieDownloadMonitor | null = null;
 
 async function shutdown() {
@@ -489,13 +570,19 @@ async function restartIncompleteTranscodingJobs() {
   try {
     const backendUrl = process.env.BACKEND_URL || 'http://api:3000';
 
-    // Fetch all movies from the library
     const response = await axios.get(`${backendUrl}/movies/library`);
     const movies = response.data || [];
 
-    // Find movies that are in transcoding status but not complete
-    const incompleteTranscodings = movies.filter(
-      (movie: any) =>
+    interface MovieData {
+      status: string;
+      transcodeProgress?: string;
+      imdbId: string;
+      videoPath?: string;
+      title: string;
+    }
+
+    const incompleteTranscodings = (movies as MovieData[]).filter(
+      (movie) =>
         movie.status === 'transcoding' &&
         movie.transcodeProgress !== undefined &&
         parseFloat(movie.transcodeProgress) < 100
@@ -516,7 +603,6 @@ async function restartIncompleteTranscodingJobs() {
           `[WORKER] Restarting transcoding for: ${movie.title} (${movie.imdbId})`
         );
 
-        // Reset transcode progress to 0
         await axios.post(
           `${backendUrl}/movies/update-transcode-progress`,
           null,
@@ -528,9 +614,7 @@ async function restartIncompleteTranscodingJobs() {
           }
         );
 
-        // Check if video file exists
         if (movie.videoPath && fs.existsSync(movie.videoPath)) {
-          // Clean up old HLS segments before restarting
           const hlsDir = path.join('/app/videos', `${movie.imdbId}_hls`);
           if (fs.existsSync(hlsDir)) {
             console.log(`[WORKER] Cleaning up old HLS segments in ${hlsDir}`);
@@ -554,7 +638,6 @@ async function restartIncompleteTranscodingJobs() {
             }
           }
 
-          // Trigger a re-transcode by updating status back to transcoding
           await axios.post(`${backendUrl}/movies/update-progress`, null, {
             params: {
               imdbId: movie.imdbId,
@@ -602,14 +685,11 @@ async function main() {
 
   console.log('[WORKER] Video transcoding worker started');
 
-  // Restart incomplete transcoding jobs
   await restartIncompleteTranscodingJobs();
 
-  // Start download monitoring
   monitor.startMonitoring();
   console.log('[WORKER] Movie download monitor started');
 
-  // Health check
   setInterval(async () => {
     try {
       await redis.set(
@@ -623,9 +703,8 @@ async function main() {
     } catch (error) {
       console.error('[WORKER] Health check failed:', error);
     }
-  }, 30000); // Every 30 seconds
+  }, 30000);
 
-  // Main processing loop
   while (true) {
     try {
       const jobData = await redis.blpop('jobs', 10);
@@ -637,7 +716,6 @@ async function main() {
         console.log('[WORKER] Processing job:', job.type);
 
         if (job.type === 'processVideo') {
-          // Process transcoding job
           await transcoder.process(job);
         } else {
           console.log('[WORKER] Unknown job type:', job.type);

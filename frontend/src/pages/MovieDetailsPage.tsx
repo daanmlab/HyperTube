@@ -18,6 +18,8 @@ interface Movie {
   imageUrl: string;
   rating: string;
   status: string;
+  canStream?: boolean; // Add canStream flag
+  errorMessage?: string; // Error message if status is 'error'
 }
 
 export const MovieDetailsPage: React.FC = () => {
@@ -149,9 +151,9 @@ export const MovieDetailsPage: React.FC = () => {
               {/* Status Badge */}
               <div>
                 <Badge
-                  variant={movie.status === 'ready' ? 'default' : 'secondary'}
+                  variant={movie.status === 'ready' ? 'default' : movie.canStream ? 'default' : 'secondary'}
                 >
-                  {movie.status}
+                  {movie.status === 'ready' ? 'Ready' : movie.canStream ? 'Streaming Available' : movie.status}
                 </Badge>
               </div>
             </div>
@@ -159,9 +161,26 @@ export const MovieDetailsPage: React.FC = () => {
         </CardHeader>
       </Card>
 
-      {/* Video Player */}
-      {movie.status === 'ready' && (
+      {/* Video Player - Show when ready OR when canStream is true (progressive streaming) */}
+      {(movie.status === 'ready' || movie.canStream) && (
         <VideoPlayer videoId={movie.imdbId} title={movie.title} isMovie={true} />
+      )}
+
+      {/* Error Message - Show when status is error */}
+      {movie.status === 'error' && (
+        <Card className="border-red-500 bg-red-50">
+          <CardHeader>
+            <CardTitle className="text-red-700 flex items-center gap-2">
+              <span>⚠️</span>
+              Error Processing Video
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-red-600">
+              {movie.errorMessage || 'An error occurred while processing this video. Please try re-downloading it.'}
+            </p>
+          </CardContent>
+        </Card>
       )}
 
       {/* Comments Section */}

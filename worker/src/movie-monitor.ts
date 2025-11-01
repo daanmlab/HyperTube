@@ -1,11 +1,7 @@
 import axios from 'axios';
-import { exec } from 'child_process';
 import * as fs from 'fs';
 import Redis from 'ioredis';
 import * as path from 'path';
-import { promisify } from 'util';
-
-const execAsync = promisify(exec);
 
 interface AriaDownload {
   gid: string;
@@ -42,10 +38,9 @@ export class MovieDownloadMonitor {
   private readonly aria2Url = 'http://aria2:6800/jsonrpc';
   private readonly rpcSecret = 'token:superlongrandomtoken';
   private readonly backendUrl = 'http://api:3000';
-  private readonly downloadDir = '/downloads';
   private readonly videoDir = '/app/videos';
   private monitoringInterval: NodeJS.Timeout | null = null;
-  private activeTranscodings = new Set<string>(); // Track active transcoding jobs
+  private activeTranscodings = new Set<string>();
   private redis: Redis;
 
   constructor() {
@@ -56,7 +51,7 @@ export class MovieDownloadMonitor {
     this.startMonitoring();
   }
 
-  private async callAria2(method: string, params: any[] = []): Promise<any> {
+  private async callAria2(method: string, params: unknown[] = []): Promise<unknown> {
     try {
       const response = await axios.post(this.aria2Url, {
         jsonrpc: '2.0',
@@ -70,8 +65,9 @@ export class MovieDownloadMonitor {
       }
 
       return response.data.result;
-    } catch (error: any) {
-      console.error(`Aria2 ${method} error:`, error.message);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`Aria2 ${method} error:`, message);
       throw error;
     }
   }
@@ -163,60 +159,56 @@ export class MovieDownloadMonitor {
         '.webm',
       ];
 
-      // If Aria2 files array is provided, try to use it first
       if (files && files.length > 0) {
         for (const file of files) {
           const ext = path.extname(file.path).toLowerCase();
           if (videoExtensions.includes(ext)) {
             const fileSize = parseInt(file.length);
-            // Only consider files larger than 10MB as actual video files
-            if (fileSize > 10 * 1024 * 1024 && fs.existsSync(file.path)) {
+            if (fileSize > 10 * 1024 * 1024 && 
+                file.path.startsWith(downloadPath) && 
+                fs.existsSync(file.path)) {
+              console.log(`[MONITOR] Found video via Aria2: ${file.path}`);
               return file.path;
             }
           }
         }
       }
 
-      // If movieTitle is provided, try to find a matching subdirectory first
       if (movieTitle && fs.existsSync(downloadPath)) {
         const subdirs = fs.readdirSync(downloadPath).filter(item => {
           const itemPath = path.join(downloadPath, item);
           return fs.statSync(itemPath).isDirectory();
         });
-
-        // Try to find a directory that matches the movie title
+        
         const normalizedTitle = movieTitle
           .toLowerCase()
           .replace(/[^a-z0-9]/g, '');
+        
         const matchingDir = subdirs.find(dir => {
           const normalizedDir = dir.toLowerCase().replace(/[^a-z0-9]/g, '');
           return (
-            normalizedDir.includes(normalizedTitle) ||
-            normalizedTitle.includes(normalizedDir.split(/[^a-z0-9]/)[0])
+            (normalizedDir.includes(normalizedTitle) && normalizedTitle.length >= 10) ||
+            (normalizedTitle.includes(normalizedDir) && normalizedDir.length >= 10)
           );
         });
 
         if (matchingDir) {
           const targetDir = path.join(downloadPath, matchingDir);
-          console.log(
-            `[MONITOR] Found matching directory for "${movieTitle}": ${targetDir}`
-          );
           const videoFile = await this.findVideoInDirectory(
             targetDir,
             videoExtensions
           );
           if (videoFile) {
+            console.log(`[MONITOR] Found video in directory: ${videoFile}`);
             return videoFile;
           }
         }
       }
 
-      // Fallback: search directory recursively
-      const videoFile = await this.findVideoInDirectory(
-        downloadPath,
-        videoExtensions
+      console.error(
+        `[MONITOR] Could not find video file for "${movieTitle}" in ${downloadPath}`
       );
-      return videoFile;
+      return null;
     } catch (error) {
       console.error('Error finding video file:', error);
       return null;
@@ -269,7 +261,6 @@ export class MovieDownloadMonitor {
     videoFilePath: string
   ): Promise<void> {
     try {
-      // Check if transcoding is already active for this movie
       if (this.activeTranscodings.has(movie.imdbId)) {
         console.log(
           `Transcoding already active for ${movie.title}, skipping...`
@@ -277,9 +268,6 @@ export class MovieDownloadMonitor {
         return;
       }
 
-      // Check if movie is already being transcoded or ready
-      // Note: We check activeTranscodings (which tracks actual running jobs) rather than just progress,
-      // because the progress value can come from existing segment files on disk even if no job is running
       if (this.activeTranscodings.has(movie.imdbId)) {
         console.log(
           `${movie.title} has an active transcoding job, skipping...`
@@ -292,8 +280,6 @@ export class MovieDownloadMonitor {
         return;
       }
 
-      // If status is transcoding but no active job exists, it might be stuck from a previous session
-      // In this case, we should restart it
       if (
         movie.status === 'transcoding' &&
         parseInt(movie.transcodeProgress.toString()) > 0 &&
@@ -302,24 +288,21 @@ export class MovieDownloadMonitor {
         console.log(
           `${movie.title} shows transcoding progress (${movie.transcodeProgress}%) but no active job - restarting transcoding...`
         );
-        // Continue to start transcoding
       }
 
       console.log(`Starting progressive transcoding for ${movie.title}`);
       this.activeTranscodings.add(movie.imdbId);
 
-      // Create output directory for this movie
-      const outputDir = path.join(this.videoDir, movie.imdbId + '_hls');
+      const outputDir = path.join(this.videoDir, `${movie.imdbId}_hls`);
       fs.mkdirSync(outputDir, { recursive: true });
 
-      // Start transcoding with lower segment time for faster initial availability
       const transcodingJob = {
         type: 'hls',
         inputPath: videoFilePath,
         outputDir,
         videoId: movie.imdbId,
         options: {
-          segmentTime: 4, // Smaller segments for faster initial playback
+          segmentTime: 4,
           enableThumbnails: true,
           qualities: [
             {
@@ -342,17 +325,14 @@ export class MovieDownloadMonitor {
         },
       };
 
-      // This would integrate with the existing VideoTranscoder
       console.log('Transcoding job created:', transcodingJob);
 
-      // Update movie status to transcoding
       await this.updateMovieProgress(movie.imdbId, {
         status: 'transcoding',
         videoPath: videoFilePath,
-        transcodeProgress: 1, // Set to 1 to indicate transcoding has started
+        transcodeProgress: 1,
       });
 
-      // Submit real transcoding job to Redis queue
       await this.submitTranscodingJob(movie.imdbId, videoFilePath, outputDir);
     } catch (error) {
       console.error(`Error starting transcoding for ${movie.title}:`, error);
@@ -374,23 +354,26 @@ export class MovieDownloadMonitor {
         outputDir: outputDir,
         videoId: videoId,
         options: {
-          segmentTime: 4, // Smaller segments for faster initial playback
+          segmentTime: 10, // Increased to 10 seconds for faster transcoding with fewer segments
           enableThumbnails: true,
+          preset: 'ultrafast', // Ultrafast preset for maximum speed (5-10x faster than veryfast)
+          crf: 30, // Higher CRF for faster encoding (slight quality reduction)
+          hardwareAccel: true, // Try to use hardware acceleration if available
           qualities: [
             {
               name: '480p',
               width: 854,
               height: 480,
-              videoBitrate: '1400k',
-              audioBitrate: '128k',
+              videoBitrate: '1000k', // Reduced bitrate for faster encoding
+              audioBitrate: '96k', // Reduced audio bitrate for faster encoding
               suffix: '_480p',
             },
             {
               name: '720p',
               width: 1280,
               height: 720,
-              videoBitrate: '2800k',
-              audioBitrate: '192k',
+              videoBitrate: '2000k', // Reduced bitrate for faster encoding
+              audioBitrate: '128k', // Reduced audio bitrate for faster encoding
               suffix: '_720p',
             },
           ],
@@ -414,24 +397,22 @@ export class MovieDownloadMonitor {
       const hlsDir = path.join(this.videoDir, `${videoId}_hls`);
       const masterPath = path.join(hlsDir, 'master.m3u8');
 
-      // Check if master playlist exists
       if (!fs.existsSync(masterPath)) {
         return false;
       }
 
-      // Check if quality playlists are complete (have #EXT-X-ENDLIST)
       const playlists = ['output_480p.m3u8', 'output_720p.m3u8'];
       for (const playlist of playlists) {
         const playlistPath = path.join(hlsDir, playlist);
         if (fs.existsSync(playlistPath)) {
           const content = fs.readFileSync(playlistPath, 'utf-8');
           if (!content.includes('#EXT-X-ENDLIST')) {
-            return false; // Still transcoding
+            return false;
           }
         }
       }
 
-      return true; // All playlists exist and are complete
+      return true;
     } catch (error) {
       console.error(
         `Error checking transcoding completion for ${videoId}:`,
@@ -447,7 +428,6 @@ export class MovieDownloadMonitor {
 
       const interval = setInterval(async () => {
         try {
-          // First check if transcoding is actually complete by examining files
           const isComplete = await this.checkTranscodingComplete(videoId);
           if (isComplete) {
             clearInterval(interval);
@@ -469,12 +449,10 @@ export class MovieDownloadMonitor {
               `Transcoding progress for ${videoId}: ${status.progress}% - ${status.message}`
             );
 
-            // Update backend with progress
             await this.updateMovieProgress(videoId, {
               transcodeProgress: status.progress,
             });
 
-            // Check if completed
             if (status.status === 'ready' && status.progress === 100) {
               clearInterval(interval);
               await this.updateMovieProgress(videoId, {
@@ -498,7 +476,7 @@ export class MovieDownloadMonitor {
         } catch (error) {
           console.error(`Error monitoring progress for ${videoId}:`, error);
         }
-      }, 5000); // Check every 5 seconds
+      }, 5000);
     } catch (error) {
       console.error(
         `Error starting progress monitoring for ${videoId}:`,
@@ -509,12 +487,10 @@ export class MovieDownloadMonitor {
 
   private async checkForMissedCompletions(): Promise<void> {
     try {
-      // Get all movies from the backend
       const response = await axios.get(`${this.backendUrl}/movies/library`);
       const movies: Movie[] = response.data;
 
       for (const movie of movies) {
-        // Check movies that are still marked as downloading but might be complete
         if (movie.status === 'downloading' && movie.videoPath) {
           const videoPath = movie.videoPath;
 
@@ -531,7 +507,6 @@ export class MovieDownloadMonitor {
               `[MISSED] File size: ${fileSize}, Expected: ${expectedSize}`
             );
 
-            // If file exists and is reasonably close to expected size (within 1% tolerance)
             if (expectedSize > 0 && fileSize >= expectedSize * 0.99) {
               console.log(
                 `[MISSED] ${movie.title} appears to be complete! Starting transcoding...`
@@ -543,10 +518,8 @@ export class MovieDownloadMonitor {
                 videoPath: videoPath,
               });
 
-              // Start transcoding
               await this.startProgressiveTranscoding(movie, videoPath);
             } else if (fileSize > 100 * 1024 * 1024) {
-              // If file is > 100MB, start progressive transcoding
               console.log(
                 `[MISSED] ${movie.title} has substantial content (${fileSize} bytes), starting progressive transcoding...`
               );
@@ -588,7 +561,6 @@ export class MovieDownloadMonitor {
 
   private async checkForCompletedTranscoding(): Promise<void> {
     try {
-      // Get all movies that are marked as transcoding
       const response = await axios.get(`${this.backendUrl}/movies/library`);
       const movies = response.data;
 
@@ -620,16 +592,11 @@ export class MovieDownloadMonitor {
     try {
       console.log('[MONITOR] Starting download check...');
 
-      // First, check all movies in the database for completed downloads that may have been missed
       await this.checkForMissedCompletions();
 
-      // Check for completed transcoding
       await this.checkForCompletedTranscoding();
 
-      // Get active downloads from aria2
-      const activeDownloads: AriaDownload[] = await this.callAria2(
-        'tellActive'
-      );
+      const activeDownloads = await this.callAria2('tellActive') as AriaDownload[];
       console.log(`[MONITOR] Found ${activeDownloads.length} active downloads`);
 
       for (const download of activeDownloads) {
@@ -680,11 +647,7 @@ export class MovieDownloadMonitor {
         }
       }
 
-      // Check completed downloads
-      const completedDownloads: AriaDownload[] = await this.callAria2(
-        'tellStopped',
-        [0, 10]
-      );
+      const completedDownloads = await this.callAria2('tellStopped', [0, 10]) as AriaDownload[];
       console.log(
         `[MONITOR] Found ${completedDownloads.length} completed downloads`
       );
@@ -704,7 +667,6 @@ export class MovieDownloadMonitor {
           }
 
           console.log(`[MONITOR] Processing completed movie: ${movie.title}`);
-          console.log(`[MONITOR] Download directory: ${download.dir}`);
 
           const videoFile = await this.findVideoFile(
             download.dir,
@@ -712,14 +674,10 @@ export class MovieDownloadMonitor {
             movie.title
           );
           if (videoFile) {
-            console.log(`[MONITOR] Found video file: ${videoFile}`);
-
-            // Get actual file size instead of relying on aria2 data
             const actualFileSize = fs.existsSync(videoFile)
               ? fs.statSync(videoFile).size
               : parseInt(download.totalLength);
 
-            // Only update if not already ready
             if (movie.status !== 'ready') {
               await this.updateMovieProgress(movie.imdbId, {
                 status: 'transcoding',
@@ -727,21 +685,14 @@ export class MovieDownloadMonitor {
                 videoPath: videoFile,
               });
 
-              // Start full quality transcoding
               await this.startProgressiveTranscoding(movie, videoFile);
             } else {
-              console.log(
-                `[MONITOR] ${movie.title} is already ready, skipping...`
-              );
-              // Just update video path if it changed
               if (movie.videoPath !== videoFile) {
                 await this.updateMovieProgress(movie.imdbId, {
                   videoPath: videoFile,
                 });
               }
             }
-          } else {
-            console.log(`[MONITOR] No video file found in: ${download.dir}`);
           }
         }
       }
