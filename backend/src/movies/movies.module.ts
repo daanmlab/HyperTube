@@ -6,6 +6,7 @@ import { Movie } from '../entities';
 import { AriaService } from './aria/aria.service';
 import { MoviesController } from './movies.controller';
 import { MoviesService } from './movies.service';
+import { OptimizedSearchService } from './search/optimized-search.service';
 import { TpbService } from './tpb/tpb.service';
 import { YtsService } from './yts/yts.service';
 
@@ -27,7 +28,7 @@ import { YtsService } from './yts/yts.service';
     }),
   ],
   controllers: [MoviesController],
-  providers: [MoviesService, YtsService, AriaService, TpbService],
-  exports: [MoviesService],
+  providers: [MoviesService, YtsService, AriaService, TpbService, OptimizedSearchService],
+  exports: [MoviesService, OptimizedSearchService],
 })
 export class MoviesModule {}

@@ -15,7 +15,12 @@
     "migration:revert": "npm run typeorm -- migration:revert -d src/data-source.ts",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
-    "format": "biome format --write ."
+    "format": "biome format --write .",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:cov": "jest --coverage",
+    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+    "test:performance": "ts-node -r tsconfig-paths/register src/movies/search/performance-test.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
@@ -47,12 +52,18 @@
   "devDependencies": {
     "@biomejs/biome": "2.3.2",
     "@nestjs/cli": "^10.0.0",
+    "@nestjs/testing": "^10.4.20",
     "@openapitools/openapi-generator-cli": "^2.21.4",
     "@types/bcryptjs": "^2.4.6",
     "@types/ioredis": "^4.28.10",
+    "@types/jest": "^30.0.0",
     "@types/multer": "^2.0.0",
     "@types/passport-jwt": "^4.0.1",
     "@types/passport-local": "^1.0.38",
+    "@types/supertest": "^6.0.3",
+    "jest": "^30.2.0",
+    "supertest": "^7.1.4",
+    "ts-jest": "^29.4.5",
     "ts-node": "^10.9.1",
     "typescript": "^5.0.4"
   }
