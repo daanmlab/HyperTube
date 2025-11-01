@@ -115,7 +115,7 @@ describe('OptimizedSearchService', () => {
     it('should return cached results on cache hit', async () => {
       const keywords = 'Shawshank';
       const cachedData = JSON.stringify(mockYtsResults);
-      
+
       mockRedis.get.mockResolvedValueOnce(cachedData);
 
       const result = await service.search(keywords, 1);
@@ -129,7 +129,7 @@ describe('OptimizedSearchService', () => {
 
     it('should fetch from API on cache miss', async () => {
       const keywords = 'Godfather';
-      
+
       mockRedis.get.mockResolvedValueOnce(null);
       (ytsService.search as jest.Mock).mockResolvedValueOnce(mockYtsResults);
 
@@ -143,7 +143,7 @@ describe('OptimizedSearchService', () => {
 
     it('should handle empty results', async () => {
       const keywords = 'NonexistentMovie123456';
-      
+
       mockRedis.get.mockResolvedValueOnce(null);
       (ytsService.search as jest.Mock).mockResolvedValueOnce([]);
 
@@ -156,7 +156,7 @@ describe('OptimizedSearchService', () => {
 
     it('should handle API errors gracefully', async () => {
       const keywords = 'Error';
-      
+
       mockRedis.get.mockResolvedValueOnce(null);
       (ytsService.search as jest.Mock).mockResolvedValueOnce(null); // YTS returns null on error
 
@@ -172,7 +172,7 @@ describe('OptimizedSearchService', () => {
         ...mockYtsResults,
         { ...mockYtsResults[0], api: 'tpb' }, // Duplicate with different source
       ];
-      
+
       mockRedis.get.mockResolvedValueOnce(null);
       (ytsService.search as jest.Mock).mockResolvedValueOnce(duplicateResults);
 
@@ -184,7 +184,7 @@ describe('OptimizedSearchService', () => {
 
     it('should sort results by relevance', async () => {
       const keywords = 'godfather';
-      
+
       mockRedis.get.mockResolvedValueOnce(null);
       (ytsService.search as jest.Mock).mockResolvedValueOnce(mockYtsResults);
 
@@ -196,7 +196,7 @@ describe('OptimizedSearchService', () => {
 
     it('should include response time in stats', async () => {
       const keywords = 'Test';
-      
+
       mockRedis.get.mockResolvedValueOnce(null);
       (ytsService.search as jest.Mock).mockResolvedValueOnce(mockYtsResults);
 
@@ -208,7 +208,7 @@ describe('OptimizedSearchService', () => {
 
     it('should include sources in stats', async () => {
       const keywords = 'Test';
-      
+
       mockRedis.get.mockResolvedValueOnce(null);
       (ytsService.search as jest.Mock).mockResolvedValueOnce(mockYtsResults);
 
@@ -226,13 +226,13 @@ describe('OptimizedSearchService', () => {
       // First request - cache miss
       mockRedis.get.mockResolvedValueOnce(null);
       (ytsService.search as jest.Mock).mockResolvedValueOnce(mockYtsResults);
-      
+
       const missResult = await service.search(keywords, 1);
       const missTime = missResult.stats.responseTime;
 
       // Second request - cache hit
       mockRedis.get.mockResolvedValueOnce(cachedData);
-      
+
       const hitResult = await service.search(keywords, 1);
       const hitTime = hitResult.stats.responseTime;
 
@@ -243,7 +243,7 @@ describe('OptimizedSearchService', () => {
 
     it('should handle concurrent requests efficiently', async () => {
       const keywords = 'Concurrent';
-      
+
       mockRedis.get.mockResolvedValue(null);
       (ytsService.search as jest.Mock).mockResolvedValue(mockYtsResults);
 
@@ -257,7 +257,7 @@ describe('OptimizedSearchService', () => {
 
       // All requests should complete
       expect(results).toHaveLength(10);
-      results.forEach(result => {
+      results.forEach((result) => {
         expect(result.data).toHaveLength(2);
       });
 
@@ -269,11 +269,8 @@ describe('OptimizedSearchService', () => {
   describe('cache management', () => {
     it('should clear specific query cache', async () => {
       const keywords = 'ClearTest';
-      
-      mockRedis.keys.mockResolvedValueOnce([
-        'search:cleartest:1',
-        'search:cleartest:2',
-      ]);
+
+      mockRedis.keys.mockResolvedValueOnce(['search:cleartest:1', 'search:cleartest:2']);
       mockRedis.del.mockResolvedValueOnce(2);
 
       await service.clearCache(keywords);
@@ -296,15 +293,12 @@ describe('OptimizedSearchService', () => {
       expect(mockRedis.del).toHaveBeenCalledWith(
         'search:movie1:1',
         'search:movie2:1',
-        'search:movie3:1'
+        'search:movie3:1',
       );
     });
 
     it('should get cache statistics', async () => {
-      mockRedis.keys.mockResolvedValueOnce([
-        'search:test1:1',
-        'search:test2:1',
-      ]);
+      mockRedis.keys.mockResolvedValueOnce(['search:test1:1', 'search:test2:1']);
       mockRedis.info.mockResolvedValueOnce('used_memory_human:2.5M\nother:value');
 
       const stats = await service.getCacheStats();
@@ -317,7 +311,7 @@ describe('OptimizedSearchService', () => {
   describe('edge cases', () => {
     it('should handle cache read errors', async () => {
       const keywords = 'ErrorTest';
-      
+
       mockRedis.get.mockRejectedValueOnce(new Error('Redis connection failed'));
       (ytsService.search as jest.Mock).mockResolvedValueOnce(mockYtsResults);
 
@@ -330,7 +324,7 @@ describe('OptimizedSearchService', () => {
 
     it('should handle cache write errors', async () => {
       const keywords = 'WriteError';
-      
+
       mockRedis.get.mockResolvedValueOnce(null);
       mockRedis.setex.mockRejectedValueOnce(new Error('Write failed'));
       (ytsService.search as jest.Mock).mockResolvedValueOnce(mockYtsResults);
@@ -343,7 +337,7 @@ describe('OptimizedSearchService', () => {
 
     it('should normalize cache keys (lowercase, trim)', async () => {
       const keywords = '  UPPERCASE Test  ';
-      
+
       mockRedis.get.mockResolvedValueOnce(null);
       (ytsService.search as jest.Mock).mockResolvedValueOnce(mockYtsResults);
 
@@ -354,18 +348,14 @@ describe('OptimizedSearchService', () => {
 
     it('should handle pagination correctly', async () => {
       const keywords = 'Pagination';
-      
+
       mockRedis.get.mockResolvedValueOnce(null);
       (ytsService.search as jest.Mock).mockResolvedValueOnce(mockYtsResults);
 
       await service.search(keywords, 3);
 
       expect(ytsService.search).toHaveBeenCalledWith(keywords, 3);
-      expect(mockRedis.setex).toHaveBeenCalledWith(
-        'search:pagination:3',
-        3600,
-        expect.any(String)
-      );
+      expect(mockRedis.setex).toHaveBeenCalledWith('search:pagination:3', 3600, expect.any(String));
     });
   });
 });

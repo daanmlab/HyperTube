@@ -1,12 +1,6 @@
 import { apiClient } from '@/api/client';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Play, RefreshCw, Trash2, Video } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { VideoPlayer } from './VideoPlayer';
@@ -32,10 +26,7 @@ interface VideoListProps {
   refreshTrigger?: number;
 }
 
-export const VideoList: React.FC<VideoListProps> = ({
-  onVideoSelect,
-  refreshTrigger,
-}) => {
+export const VideoList: React.FC<VideoListProps> = ({ onVideoSelect, refreshTrigger }) => {
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -53,8 +44,8 @@ export const VideoList: React.FC<VideoListProps> = ({
           video.status === 'ready'
             ? 'ready'
             : video.status === 'processing'
-            ? 'processing'
-            : 'error',
+              ? 'processing'
+              : 'error',
         createdAt: video.createdAt,
         availableQualities: video.availableQualities || [],
         hasMasterPlaylist: video.hasMasterPlaylist || false,
@@ -65,9 +56,7 @@ export const VideoList: React.FC<VideoListProps> = ({
     } catch (error) {
       console.error('Failed to load videos:', error);
       // Fallback to localStorage if API fails
-      const uploadedVideos = JSON.parse(
-        localStorage.getItem('uploadedVideos') || '[]'
-      );
+      const uploadedVideos = JSON.parse(localStorage.getItem('uploadedVideos') || '[]');
       const fallbackVideos = uploadedVideos.map((videoId: string) => ({
         id: videoId,
         filename: videoId,
@@ -90,12 +79,10 @@ export const VideoList: React.FC<VideoListProps> = ({
   };
 
   const handleDeleteVideo = (videoId: string) => {
-    const uploadedVideos = JSON.parse(
-      localStorage.getItem('uploadedVideos') || '[]'
-    );
+    const uploadedVideos = JSON.parse(localStorage.getItem('uploadedVideos') || '[]');
     const updatedVideos = uploadedVideos.filter((id: string) => id !== videoId);
     localStorage.setItem('uploadedVideos', JSON.stringify(updatedVideos));
-    setVideos(videos.filter(v => v.id !== videoId));
+    setVideos(videos.filter((v) => v.id !== videoId));
     if (selectedVideo === videoId) {
       setSelectedVideo(null);
     }
@@ -146,9 +133,7 @@ export const VideoList: React.FC<VideoListProps> = ({
                 <Video className="h-5 w-5" />
                 Video Library
               </CardTitle>
-              <CardDescription>
-                Your uploaded and processed videos
-              </CardDescription>
+              <CardDescription>Your uploaded and processed videos</CardDescription>
             </div>
             <Button
               variant="outline"
@@ -157,9 +142,7 @@ export const VideoList: React.FC<VideoListProps> = ({
               disabled={isLoading}
               className="flex items-center gap-2"
             >
-              <RefreshCw
-                className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`}
-              />
+              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
           </div>
@@ -173,7 +156,7 @@ export const VideoList: React.FC<VideoListProps> = ({
             </div>
           ) : (
             <div className="space-y-3">
-              {videos.map(video => (
+              {videos.map((video) => (
                 <div
                   key={video.id}
                   className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
@@ -193,12 +176,11 @@ export const VideoList: React.FC<VideoListProps> = ({
                             ({video.enhancedStatus.progress}%)
                           </span>
                         )}
-                        {video.availableQualities &&
-                          video.availableQualities.length > 0 && (
-                            <span className="text-muted-foreground">
-                              • {video.availableQualities.join(', ')}
-                            </span>
-                          )}
+                        {video.availableQualities && video.availableQualities.length > 0 && (
+                          <span className="text-muted-foreground">
+                            • {video.availableQualities.join(', ')}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -209,14 +191,12 @@ export const VideoList: React.FC<VideoListProps> = ({
                       onClick={() => handleVideoSelect(video.id)}
                       disabled={
                         video.status === 'error' ||
-                        (!video.enhancedStatus?.availableForStreaming &&
-                          video.status !== 'ready')
+                        (!video.enhancedStatus?.availableForStreaming && video.status !== 'ready')
                       }
                       className="flex items-center gap-1"
                     >
                       <Play className="h-3 w-3" />
-                      {video.enhancedStatus?.availableForStreaming &&
-                      video.status === 'processing'
+                      {video.enhancedStatus?.availableForStreaming && video.status === 'processing'
                         ? 'Stream'
                         : 'Play'}
                     </Button>
@@ -237,10 +217,7 @@ export const VideoList: React.FC<VideoListProps> = ({
       </Card>
 
       {selectedVideo && (
-        <VideoPlayer
-          videoId={selectedVideo}
-          title={`Transcoded Video - ${selectedVideo}`}
-        />
+        <VideoPlayer videoId={selectedVideo} title={`Transcoded Video - ${selectedVideo}`} />
       )}
     </div>
   );

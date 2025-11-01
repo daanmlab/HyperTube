@@ -1,8 +1,4 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Subtitle } from '../entities/subtitle.entity';
@@ -16,9 +12,7 @@ export class SubtitlesService {
     private subtitleRepository: Repository<Subtitle>,
   ) {}
 
-  async create(
-    createSubtitleDto: CreateSubtitleDto,
-  ): Promise<SubtitleResponseDto> {
+  async create(createSubtitleDto: CreateSubtitleDto): Promise<SubtitleResponseDto> {
     // Check if subtitle already exists for this movie and language
     const existing = await this.subtitleRepository.findOne({
       where: {
@@ -46,18 +40,13 @@ export class SubtitlesService {
     return subtitles.map((subtitle) => this.toResponseDto(subtitle));
   }
 
-  async findByMovieAndLanguage(
-    imdbId: string,
-    language: string,
-  ): Promise<SubtitleResponseDto> {
+  async findByMovieAndLanguage(imdbId: string, language: string): Promise<SubtitleResponseDto> {
     const subtitle = await this.subtitleRepository.findOne({
       where: { imdbId, language },
     });
 
     if (!subtitle) {
-      throw new NotFoundException(
-        `Subtitle not found for language ${language}`,
-      );
+      throw new NotFoundException(`Subtitle not found for language ${language}`);
     }
 
     return this.toResponseDto(subtitle);

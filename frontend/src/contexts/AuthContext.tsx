@@ -89,7 +89,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       const { access_token, user: userData } = response.data;
-      
+
       setToken(access_token);
       setUser(userData);
       localStorage.setItem('authToken', access_token);
@@ -102,7 +102,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setToken(authToken);
       localStorage.setItem('authToken', authToken);
-      
+
       // Fetch user data with the token
       const response = await apiClient.get<User>('/auth/me');
       setUser(response.data);
@@ -119,7 +119,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await apiClient.post<AuthResponse>('/auth/register', userData);
 
       const { access_token, user: newUser } = response.data;
-      
+
       setToken(access_token);
       setUser(newUser);
       localStorage.setItem('authToken', access_token);

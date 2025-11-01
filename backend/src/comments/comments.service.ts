@@ -1,18 +1,10 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Comment } from '../entities/comment.entity';
 import { Movie } from '../entities/movie.entity';
 import { User } from '../entities/user.entity';
-import {
-  CommentResponseDto,
-  CreateCommentDto,
-  UpdateCommentDto,
-} from './dto';
+import { CommentResponseDto, CreateCommentDto, UpdateCommentDto } from './dto';
 
 @Injectable()
 export class CommentsService {
@@ -23,19 +15,14 @@ export class CommentsService {
     private moviesRepository: Repository<Movie>,
   ) {}
 
-  async create(
-    createCommentDto: CreateCommentDto,
-    user: User,
-  ): Promise<CommentResponseDto> {
+  async create(createCommentDto: CreateCommentDto, user: User): Promise<CommentResponseDto> {
     // Verify movie exists
     const movie = await this.moviesRepository.findOne({
       where: { imdbId: createCommentDto.imdbId },
     });
 
     if (!movie) {
-      throw new NotFoundException(
-        `Movie with IMDB ID ${createCommentDto.imdbId} not found`,
-      );
+      throw new NotFoundException(`Movie with IMDB ID ${createCommentDto.imdbId} not found`);
     }
 
     const comment = this.commentsRepository.create({

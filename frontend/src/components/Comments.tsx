@@ -1,12 +1,6 @@
 import { apiClient } from '@/api/client';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { MessageSquare, Send, Trash2, Edit2, X } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
@@ -134,9 +128,7 @@ export const Comments: React.FC<CommentsProps> = ({ imdbId, currentUserId }) => 
           <MessageSquare className="h-5 w-5" />
           Comments ({comments.length})
         </CardTitle>
-        <CardDescription>
-          Share your thoughts about this movie
-        </CardDescription>
+        <CardDescription>Share your thoughts about this movie</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* New Comment Form */}
@@ -150,14 +142,8 @@ export const Comments: React.FC<CommentsProps> = ({ imdbId, currentUserId }) => 
             disabled={isSubmitting}
           />
           <div className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">
-              {newComment.length}/1000
-            </span>
-            <Button
-              type="submit"
-              disabled={!newComment.trim() || isSubmitting}
-              size="sm"
-            >
+            <span className="text-sm text-muted-foreground">{newComment.length}/1000</span>
+            <Button type="submit" disabled={!newComment.trim() || isSubmitting} size="sm">
               <Send className="h-4 w-4 mr-2" />
               Post Comment
             </Button>
@@ -174,15 +160,13 @@ export const Comments: React.FC<CommentsProps> = ({ imdbId, currentUserId }) => 
             </p>
           ) : (
             comments.map((comment) => (
-              <div
-                key={comment.id}
-                className="border rounded-lg p-4 space-y-2"
-              >
+              <div key={comment.id} className="border rounded-lg p-4 space-y-2">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                       <span className="text-sm font-medium">
-                        {comment.user.firstName[0]}{comment.user.lastName[0]}
+                        {comment.user.firstName[0]}
+                        {comment.user.lastName[0]}
                       </span>
                     </div>
                     <div>
@@ -197,20 +181,12 @@ export const Comments: React.FC<CommentsProps> = ({ imdbId, currentUserId }) => 
                   {currentUserId === comment.user.id && (
                     <div className="flex gap-2">
                       {editingId === comment.id ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={cancelEdit}
-                        >
+                        <Button variant="ghost" size="sm" onClick={cancelEdit}>
                           <X className="h-4 w-4" />
                         </Button>
                       ) : (
                         <>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => startEdit(comment)}
-                          >
+                          <Button variant="ghost" size="sm" onClick={() => startEdit(comment)}>
                             <Edit2 className="h-4 w-4" />
                           </Button>
                           <Button

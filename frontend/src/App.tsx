@@ -5,12 +5,7 @@ import { AuthPage } from '@/pages/AuthPage';
 import { Dashboard } from '@/pages/Dashboard';
 import { MovieDetailsPage } from '@/pages/MovieDetailsPage';
 import { SearchPage } from '@/pages/SearchPage';
-import {
-  Navigate,
-  Route,
-  BrowserRouter as Router,
-  Routes,
-} from 'react-router-dom';
+import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
 import './index.css';
 
 export default function App() {

@@ -15,8 +15,8 @@ import { LocalStrategy } from './strategies/local.strategy';
     PassportModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'fallback-secret-key-change-in-production',
-      signOptions: { 
-        expiresIn: process.env.JWT_EXPIRES_IN || '24h' 
+      signOptions: {
+        expiresIn: process.env.JWT_EXPIRES_IN || '24h',
       },
     }),
   ],

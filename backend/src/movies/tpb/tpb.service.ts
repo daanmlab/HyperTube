@@ -50,7 +50,7 @@ export class TpbService {
             q: query,
             cat: '200,201,202,207', // Video categories
           },
-        })
+        }),
       );
 
       if (!Array.isArray(data) || data.length === 0) {
@@ -59,8 +59,8 @@ export class TpbService {
 
       // Filter only torrents with seeders and return formatted results
       return data
-        .filter(t => parseInt(t.seeders) > 0)
-        .map(torrent => ({
+        .filter((t) => parseInt(t.seeders) > 0)
+        .map((torrent) => ({
           name: torrent.name,
           hash: torrent.info_hash,
           magnet: this.buildMagnet(torrent.info_hash, torrent.name),
@@ -111,9 +111,7 @@ export class TpbService {
 
       // Filter for 1080p or 720p
       const hdResults = results.filter(
-        r =>
-          r.name.toLowerCase().includes('1080p') ||
-          r.name.toLowerCase().includes('720p')
+        (r) => r.name.toLowerCase().includes('1080p') || r.name.toLowerCase().includes('720p'),
       );
 
       // Return the one with most seeders

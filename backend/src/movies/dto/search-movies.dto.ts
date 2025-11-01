@@ -24,12 +24,21 @@ export class SearchMoviesDto {
   @IsInt()
   year?: number;
 
-  @ApiProperty({ description: 'Sort by field', required: false, enum: ['title', 'year', 'rating', 'trending'] })
+  @ApiProperty({
+    description: 'Sort by field',
+    required: false,
+    enum: ['title', 'year', 'rating', 'trending'],
+  })
   @IsOptional()
   @IsString()
   sortBy?: 'title' | 'year' | 'rating' | 'trending';
 
-  @ApiProperty({ description: 'Sort order', required: false, enum: ['asc', 'desc'], default: 'desc' })
+  @ApiProperty({
+    description: 'Sort order',
+    required: false,
+    enum: ['asc', 'desc'],
+    default: 'desc',
+  })
   @IsOptional()
   @IsString()
   order?: 'asc' | 'desc';
@@ -40,7 +49,13 @@ export class SearchMoviesDto {
   @Min(1)
   page?: number;
 
-  @ApiProperty({ description: 'Items per page', required: false, default: 20, minimum: 1, maximum: 50 })
+  @ApiProperty({
+    description: 'Items per page',
+    required: false,
+    default: 20,
+    minimum: 1,
+    maximum: 50,
+  })
   @IsOptional()
   @IsInt()
   @Min(1)

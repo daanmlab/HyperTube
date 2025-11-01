@@ -17,20 +17,14 @@ export class AriaService {
           id: Date.now(),
           method: `aria2.${method}`,
           params: [this.rpcSecret, ...params],
-        })
+        }),
       );
       if (response.data.error) {
-        throw new HttpException(
-          response.data.error.message,
-          HttpStatus.BAD_REQUEST
-        );
+        throw new HttpException(response.data.error.message, HttpStatus.BAD_REQUEST);
       }
       return response.data.result;
     } catch (error: any) {
-      throw new HttpException(
-        error?.message ?? 'Unknown error',
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
+      throw new HttpException(error?.message ?? 'Unknown error', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 

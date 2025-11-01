@@ -79,10 +79,7 @@ export class VideosService {
     port: Number(process.env.REDIS_PORT || 6379),
   });
 
-  handleUpload(
-    file: Express.Multer.File,
-    options?: TranscodingOptions
-  ): VideoUploadResponseDto {
+  handleUpload(file: Express.Multer.File, options?: TranscodingOptions): VideoUploadResponseDto {
     // Enhanced job with transcoding options
     const enhancedJob = {
       type: 'processVideo',
@@ -188,8 +185,8 @@ export class VideosService {
     try {
       const files = fs.readdirSync(this.videosDir);
       const videos = files
-        .filter(file => !file.includes('.') && !file.endsWith('_hls'))
-        .map(async videoId => {
+        .filter((file) => !file.includes('.') && !file.endsWith('_hls'))
+        .map(async (videoId) => {
           const hlsDir = path.join(this.videosDir, videoId + '_hls');
           const playlistPath = path.join(hlsDir, 'output.m3u8');
           const masterPlaylistPath = path.join(hlsDir, 'master.m3u8');
@@ -199,11 +196,8 @@ export class VideosService {
           let fileSize = 0;
           let availableQualities: string[] = [];
 
-          DEFAULT_QUALITIES.forEach(quality => {
-            const qualityPlaylist = path.join(
-              hlsDir,
-              `output${quality.suffix}.m3u8`
-            );
+          DEFAULT_QUALITIES.forEach((quality) => {
+            const qualityPlaylist = path.join(hlsDir, `output${quality.suffix}.m3u8`);
             if (fs.existsSync(qualityPlaylist)) {
               availableQualities.push(quality.name);
             }
@@ -278,8 +272,7 @@ export class VideosService {
       const qualityPlaylist = path.join(hlsDir, `output${quality.suffix}.m3u8`);
       if (fs.existsSync(qualityPlaylist)) {
         const bandwidth =
-          parseInt(quality.videoBitrate) * 1000 +
-          parseInt(quality.audioBitrate) * 1000;
+          parseInt(quality.videoBitrate) * 1000 + parseInt(quality.audioBitrate) * 1000;
         masterPlaylist += `#EXT-X-STREAM-INF:BANDWIDTH=${bandwidth},RESOLUTION=${quality.width}x${quality.height},NAME="${quality.name}"\n`;
         masterPlaylist += `quality/${quality.name}\n\n`;
         hasAnyQuality = true;
@@ -315,11 +308,7 @@ export class VideosService {
       return res.status(400).send('Invalid quality specified');
     }
 
-    const playlistPath = path.join(
-      this.videosDir,
-      videoId + '_hls',
-      `output${suffix}.m3u8`
-    );
+    const playlistPath = path.join(this.videosDir, videoId + '_hls', `output${suffix}.m3u8`);
 
     if (!fs.existsSync(playlistPath)) {
       return res.status(404).send('Quality playlist not found');
@@ -332,21 +321,13 @@ export class VideosService {
     res.setHeader('Cache-Control', 'no-cache');
 
     const playlistContent = fs.readFileSync(playlistPath, 'utf8');
-    const modifiedPlaylist = playlistContent.replace(
-      /^(output_\w+\.ts)$/gm,
-      '../$1'
-    );
+    const modifiedPlaylist = playlistContent.replace(/^(output_\w+\.ts)$/gm, '../$1');
 
     res.send(modifiedPlaylist);
   }
 
   async getHlsSegment(videoId: string, segment: string, res: Response) {
-    console.log(
-      'getHlsSegment called with videoId:',
-      videoId,
-      'segment:',
-      segment
-    );
+    console.log('getHlsSegment called with videoId:', videoId, 'segment:', segment);
 
     // Special case: if segment is hls.m3u8, redirect to the HLS playlist method
     if (segment === 'hls.m3u8') {
@@ -377,7 +358,7 @@ export class VideosService {
       this.videosDir,
       videoId + '_hls',
       'thumbnails',
-      `thumb_${thumbnailId}.png`
+      `thumb_${thumbnailId}.png`,
     );
 
     if (!fs.existsSync(thumbnailPath)) {
@@ -394,11 +375,7 @@ export class VideosService {
   }
 
   async listThumbnails(videoId: string) {
-    const thumbnailDir = path.join(
-      this.videosDir,
-      videoId + '_hls',
-      'thumbnails'
-    );
+    const thumbnailDir = path.join(this.videosDir, videoId + '_hls', 'thumbnails');
 
     if (!fs.existsSync(thumbnailDir)) {
       return [];
@@ -407,12 +384,12 @@ export class VideosService {
     try {
       const files = fs.readdirSync(thumbnailDir);
       return files
-        .filter(file => file.endsWith('.png'))
-        .map(file => {
+        .filter((file) => file.endsWith('.png'))
+        .map((file) => {
           const match = file.match(/thumb_(\d+)\.png/);
           return match ? parseInt(match[1]) : null;
         })
-        .filter(id => id !== null)
+        .filter((id) => id !== null)
         .sort((a, b) => a - b);
     } catch (error) {
       console.error('Error listing thumbnails:', error);
