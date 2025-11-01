@@ -1,11 +1,12 @@
 import { apiClient } from '@/api/client';
 import { Comments } from '@/components/Comments';
-import { VideoPlayer } from '@/components/VideoPlayer';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { VideoPlayer } from '@/components/VideoPlayer';
 import { ArrowLeft, Calendar, Clock, Star } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import type React from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 interface Movie {
@@ -18,6 +19,8 @@ interface Movie {
   imageUrl: string;
   rating: string;
   status: string;
+  canStream?: boolean; // Add canStream flag
+  errorMessage?: string; // Error message if status is 'error'
 }
 
 export const MovieDetailsPage: React.FC = () => {
@@ -100,8 +103,9 @@ export const MovieDetailsPage: React.FC = () => {
               src={movie.imageUrl}
               alt={movie.title}
               className="w-48 h-72 object-cover rounded-lg"
-              onError={(e) => {
-                e.currentTarget.src = 'https://via.placeholder.com/300x450?text=No+Image';
+              onError={e => {
+                e.currentTarget.src =
+                  'https://via.placeholder.com/300x450?text=No+Image';
               }}
             />
             <div className="flex-1 space-y-4">
@@ -149,9 +153,19 @@ export const MovieDetailsPage: React.FC = () => {
               {/* Status Badge */}
               <div>
                 <Badge
-                  variant={movie.status === 'ready' ? 'default' : 'secondary'}
+                  variant={
+                    movie.status === 'ready'
+                      ? 'default'
+                      : movie.canStream
+                      ? 'default'
+                      : 'secondary'
+                  }
                 >
-                  {movie.status}
+                  {movie.status === 'ready'
+                    ? 'Ready'
+                    : movie.canStream
+                    ? 'Streaming Available'
+                    : movie.status}
                 </Badge>
               </div>
             </div>
@@ -159,9 +173,31 @@ export const MovieDetailsPage: React.FC = () => {
         </CardHeader>
       </Card>
 
-      {/* Video Player */}
-      {movie.status === 'ready' && (
-        <VideoPlayer videoId={movie.imdbId} title={movie.title} isMovie={true} />
+      {/* Video Player - Show when ready OR when canStream is true (progressive streaming) */}
+      {(movie.status === 'ready' || movie.canStream) && (
+        <VideoPlayer
+          videoId={movie.imdbId}
+          title={movie.title}
+          isMovie={true}
+        />
+      )}
+
+      {/* Error Message - Show when status is error */}
+      {movie.status === 'error' && (
+        <Card className="border-red-500 bg-red-50">
+          <CardHeader>
+            <CardTitle className="text-red-700 flex items-center gap-2">
+              <span>⚠️</span>
+              Error Processing Video
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-red-600">
+              {movie.errorMessage ||
+                'An error occurred while processing this video. Please try re-downloading it.'}
+            </p>
+          </CardContent>
+        </Card>
       )}
 
       {/* Comments Section */}

@@ -13,6 +13,12 @@ services:
     volumes:
       - /app/node_modules
       - videos:/app/videos
+    # Limit API resources to leave more CPU for worker
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
     depends_on:
       - db
       - redis
@@ -37,6 +43,12 @@ services:
       - ./frontend/vite.config.mts:/app/vite.config.mts
       - ./frontend/tsconfig.json:/app/tsconfig.json
       - /app/node_modules
+    # Limit frontend resources to leave more CPU for worker
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
     depends_on:
       - api
     develop:
@@ -62,6 +74,23 @@ services:
       - /app/node_modules
       - videos:/app/videos
       - ./downloads:/downloads
+    # CPU and Memory resource allocation for optimal transcoding performance
+    # Your system has 8 CPU cores - giving worker priority access
+    deploy:
+      resources:
+        limits:
+          cpus: "8" # Allow worker to use all 8 CPU cores
+          memory: 4G # 4GB memory limit (adjust based on your system RAM)
+        reservations:
+          cpus: "4" # Reserve at least 4 CPU cores for worker (50% of total)
+          memory: 2G # Reserve at least 2GB memory
+    # Set higher CPU priority for worker container
+    cpu_shares: 2048 # Default is 1024, this gives 2x priority
+    # Uncomment the following lines if running on Linux with Intel/AMD GPU for hardware acceleration
+    # devices:
+    #   - /dev/dri:/dev/dri
+    # group_add:
+    #   - video
     depends_on:
       - db
       - redis
