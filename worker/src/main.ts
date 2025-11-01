@@ -1,7 +1,7 @@
 import axios from 'axios';
-import * as fs from 'fs';
-import ffmpeg from 'fluent-ffmpeg';
 import type { FfprobeData } from 'fluent-ffmpeg';
+import ffmpeg from 'fluent-ffmpeg';
+import * as fs from 'fs';
 import Redis from 'ioredis';
 import * as path from 'path';
 import { promisify } from 'util';
@@ -106,9 +106,17 @@ class VideoTranscoder {
         if (err) {
           const errorMsg = err.message || String(err);
           if (errorMsg.includes('moov atom not found')) {
-            reject(new Error('Video file is corrupted: MP4 metadata (moov atom) not found. The download may be incomplete.'));
+            reject(
+              new Error(
+                'Video file is corrupted: MP4 metadata (moov atom) not found. The download may be incomplete.'
+              )
+            );
           } else if (errorMsg.includes('Invalid data')) {
-            reject(new Error('Video file contains invalid data. The file may be corrupted or incomplete.'));
+            reject(
+              new Error(
+                'Video file contains invalid data. The file may be corrupted or incomplete.'
+              )
+            );
           } else if (errorMsg.includes('No such file')) {
             reject(new Error(`Video file not found: ${inputPath}`));
           } else {
@@ -125,7 +133,11 @@ class VideoTranscoder {
         );
 
         if (!videoStream) {
-          reject(new Error('No video stream found in file - file may be corrupted or is not a valid video'));
+          reject(
+            new Error(
+              'No video stream found in file - file may be corrupted or is not a valid video'
+            )
+          );
           return;
         }
 
@@ -136,20 +148,23 @@ class VideoTranscoder {
         }
 
         const result: VideoMetadata = {
-          duration: typeof metadata.format.duration === 'string' 
-            ? parseFloat(metadata.format.duration) 
-            : (metadata.format.duration || 0),
+          duration:
+            typeof metadata.format.duration === 'string'
+              ? parseFloat(metadata.format.duration)
+              : metadata.format.duration || 0,
           width: videoStream.width || 0,
           height: videoStream.height || 0,
-          bitrate: typeof metadata.format.bit_rate === 'string'
-            ? parseInt(metadata.format.bit_rate)
-            : (metadata.format.bit_rate || 0),
+          bitrate:
+            typeof metadata.format.bit_rate === 'string'
+              ? parseInt(metadata.format.bit_rate)
+              : metadata.format.bit_rate || 0,
           fps,
           codec: videoStream.codec_name || 'unknown',
           audioCodec: audioStream?.codec_name || 'none',
-          fileSize: typeof metadata.format.size === 'string'
-            ? parseInt(metadata.format.size)
-            : (metadata.format.size || 0),
+          fileSize:
+            typeof metadata.format.size === 'string'
+              ? parseInt(metadata.format.size)
+              : metadata.format.size || 0,
         };
 
         console.log('[TRANSCODER] Video analysis complete:', result);
@@ -189,12 +204,17 @@ class VideoTranscoder {
             console.log('[TRANSCODER] Using VAAPI hardware acceleration');
           }
         } catch {
-          console.log('[TRANSCODER] Hardware acceleration not available, using optimized software encoding');
+          console.log(
+            '[TRANSCODER] Hardware acceleration not available, using optimized software encoding'
+          );
         }
       }
 
       const outputPath = path.join(outputDir, `output${quality.suffix}.m3u8`);
-      const segmentPath = path.join(outputDir, `output${quality.suffix}_%03d.ts`);
+      const segmentPath = path.join(
+        outputDir,
+        `output${quality.suffix}_%03d.ts`
+      );
 
       let command = ffmpeg(inputPath);
 
@@ -232,7 +252,7 @@ class VideoTranscoder {
         command = command.size(`${quality.width}x${quality.height}`);
       } else if (shouldScale && useVAAPI) {
         command = command.outputOptions([
-          `-vf scale_vaapi=w=${quality.width}:h=${quality.height}`
+          `-vf scale_vaapi=w=${quality.width}:h=${quality.height}`,
         ]);
       }
 
@@ -249,7 +269,7 @@ class VideoTranscoder {
           `-hls_segment_filename ${segmentPath}`,
           '-hls_flags independent_segments+append_list',
           '-f hls',
-          '-movflags +faststart'
+          '-movflags +faststart',
         ])
         .output(outputPath);
 
@@ -279,13 +299,14 @@ class VideoTranscoder {
               metadata,
             });
           }
-        } catch {
-        }
+        } catch {}
       }, 5000);
 
-      command.on('progress', (progress) => {
+      command.on('progress', progress => {
         if (progress.percent) {
-          console.log(`[TRANSCODER] ${quality.name}: ${Math.round(progress.percent)}%`);
+          console.log(
+            `[TRANSCODER] ${quality.name}: ${Math.round(progress.percent)}%`
+          );
         }
       });
 
@@ -295,7 +316,7 @@ class VideoTranscoder {
         resolve(true);
       });
 
-      command.on('error', (err) => {
+      command.on('error', err => {
         clearInterval(progressInterval);
         console.error(`[TRANSCODER] Error transcoding ${quality.name}:`, err);
         reject(err);
@@ -357,7 +378,7 @@ class VideoTranscoder {
       const count = Math.min(10, Math.max(3, Math.floor(duration / 30)));
 
       const promises = [];
-      
+
       for (let i = 0; i < count; i++) {
         const timestamp = (duration / count) * i;
         const outputPath = path.join(
@@ -370,11 +391,11 @@ class VideoTranscoder {
             .seekInput(timestamp)
             .outputOptions([
               '-vframes 1',
-              '-vf scale=320:180:force_original_aspect_ratio=decrease'
+              '-vf scale=320:180:force_original_aspect_ratio=decrease',
             ])
             .output(outputPath)
             .on('end', () => resolve())
-            .on('error', (err) => reject(err))
+            .on('error', err => reject(err))
             .run();
         });
 
@@ -433,7 +454,9 @@ class VideoTranscoder {
 
       // Validate metadata
       if (!metadata.duration || metadata.duration <= 0) {
-        throw new Error(`Invalid video duration: ${metadata.duration}s - file may be corrupted`);
+        throw new Error(
+          `Invalid video duration: ${metadata.duration}s - file may be corrupted`
+        );
       }
       if (!metadata.width || !metadata.height) {
         throw new Error('Invalid video dimensions - file may be corrupted');
@@ -582,7 +605,7 @@ async function restartIncompleteTranscodingJobs() {
     }
 
     const incompleteTranscodings = (movies as MovieData[]).filter(
-      (movie) =>
+      movie =>
         movie.status === 'transcoding' &&
         movie.transcodeProgress !== undefined &&
         parseFloat(movie.transcodeProgress) < 100

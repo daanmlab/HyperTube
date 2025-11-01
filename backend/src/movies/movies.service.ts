@@ -1,12 +1,16 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import type { Repository } from 'typeorm';
-import type { Response } from 'express';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import Redis from 'ioredis';
+import { InjectRepository } from '@nestjs/typeorm';
+import type { Response } from 'express';
 import * as fs from 'fs';
+import Redis from 'ioredis';
 import * as path from 'path';
-import { Movie, MovieStatus, type TorrentQuality } from '../entities/movie.entity';
+import type { Repository } from 'typeorm';
+import {
+  Movie,
+  MovieStatus,
+  type TorrentQuality,
+} from '../entities/movie.entity';
 
 export interface CreateMovieDto {
   imdbId: string;
@@ -30,7 +34,7 @@ export class MoviesService {
 
   constructor(
     @InjectRepository(Movie)
-    private movieRepository: Repository<Movie>,
+    private movieRepository: Repository<Movie>
   ) {
     this.redis = new Redis({
       host: process.env.REDIS_HOST || 'localhost',
@@ -56,9 +60,12 @@ export class MoviesService {
           // Update movie with Redis status
           if (status.status === 'error') {
             movie.status = MovieStatus.ERROR;
-            movie.errorMessage = status.error || status.message || 'Transcoding failed';
+            movie.errorMessage =
+              status.error || status.message || 'Transcoding failed';
             await this.movieRepository.save(movie);
-            console.log(`[SYNC] Updated ${movie.imdbId} to error status: ${movie.errorMessage}`);
+            console.log(
+              `[SYNC] Updated ${movie.imdbId} to error status: ${movie.errorMessage}`
+            );
           } else if (status.status === 'complete') {
             movie.status = MovieStatus.READY;
             movie.transcodeProgress = 100;
@@ -70,7 +77,10 @@ export class MoviesService {
           }
         }
       } catch (error) {
-        console.error(`[SYNC] Error syncing status for ${movie.imdbId}:`, error);
+        console.error(
+          `[SYNC] Error syncing status for ${movie.imdbId}:`,
+          error
+        );
       }
     }
   }
@@ -102,7 +112,9 @@ export class MoviesService {
       year: createMovieDto.year,
       synopsis: createMovieDto.synopsis,
       runtime: createMovieDto.runtime,
-      genres: createMovieDto.genres ? JSON.stringify(createMovieDto.genres) : undefined,
+      genres: createMovieDto.genres
+        ? JSON.stringify(createMovieDto.genres)
+        : undefined,
       imageUrl: createMovieDto.imageUrl,
       rating: createMovieDto.rating,
       trailerUrl: createMovieDto.trailerUrl,
@@ -130,7 +142,7 @@ export class MoviesService {
   async updateDownloadProgress(
     imdbId: string,
     downloadedSize: number,
-    totalSize?: number,
+    totalSize?: number
   ): Promise<Movie | null> {
     const movie = await this.findByImdbId(imdbId);
     if (!movie) return null;
@@ -142,14 +154,17 @@ export class MoviesService {
     movie.downloadedSize = downloadedSize;
     if (movie.totalSize && movie.totalSize > 0) {
       movie.downloadProgress = Number(
-        ((downloadedSize / movie.totalSize) * 100).toFixed(2),
+        ((downloadedSize / movie.totalSize) * 100).toFixed(2)
       );
     }
 
     return this.movieRepository.save(movie);
   }
 
-  async updateStatus(imdbId: string, status: MovieStatus): Promise<Movie | null> {
+  async updateStatus(
+    imdbId: string,
+    status: MovieStatus
+  ): Promise<Movie | null> {
     const movie = await this.findByImdbId(imdbId);
     if (!movie) return null;
 
@@ -159,7 +174,7 @@ export class MoviesService {
 
   async updateTranscodeProgress(
     imdbId: string,
-    progress: number,
+    progress: number
   ): Promise<Movie | null> {
     const movie = await this.findByImdbId(imdbId);
     if (!movie) return null;
@@ -168,7 +183,10 @@ export class MoviesService {
     return this.movieRepository.save(movie);
   }
 
-  async updateVideoPath(imdbId: string, videoPath: string): Promise<Movie | null> {
+  async updateVideoPath(
+    imdbId: string,
+    videoPath: string
+  ): Promise<Movie | null> {
     const movie = await this.findByImdbId(imdbId);
     if (!movie) return null;
 
@@ -176,7 +194,10 @@ export class MoviesService {
     return this.movieRepository.save(movie);
   }
 
-  async updateDownloadPath(imdbId: string, downloadPath: string): Promise<Movie | null> {
+  async updateDownloadPath(
+    imdbId: string,
+    downloadPath: string
+  ): Promise<Movie | null> {
     const movie = await this.findByImdbId(imdbId);
     if (!movie) return null;
 
@@ -250,7 +271,9 @@ export class MoviesService {
     });
 
     if (availableQualities.length === 0) {
-      throw new NotFoundException('No quality variants available yet - movie may still be transcoding');
+      throw new NotFoundException(
+        'No quality variants available yet - movie may still be transcoding'
+      );
     }
 
     // Generate HLS master playlist dynamically
@@ -267,7 +290,11 @@ export class MoviesService {
     res.send(masterPlaylist);
   }
 
-  async getOutputPlaylist(imdbId: string, quality: string, res: Response): Promise<void> {
+  async getOutputPlaylist(
+    imdbId: string,
+    quality: string,
+    res: Response
+  ): Promise<void> {
     const movie = await this.findByImdbId(imdbId);
     if (!movie) {
       throw new NotFoundException('Movie not found');
@@ -277,7 +304,9 @@ export class MoviesService {
     const playlistPath = path.join(hlsPath, `output_${quality}.m3u8`);
 
     if (!fs.existsSync(playlistPath)) {
-      throw new NotFoundException(`Quality playlist not found: output_${quality}.m3u8`);
+      throw new NotFoundException(
+        `Quality playlist not found: output_${quality}.m3u8`
+      );
     }
 
     res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
@@ -285,7 +314,12 @@ export class MoviesService {
     res.sendFile(playlistPath);
   }
 
-  async getOutputSegment(imdbId: string, quality: string, segment: string, res: Response): Promise<void> {
+  async getOutputSegment(
+    imdbId: string,
+    quality: string,
+    segment: string,
+    res: Response
+  ): Promise<void> {
     const movie = await this.findByImdbId(imdbId);
     if (!movie) {
       throw new NotFoundException('Movie not found');
@@ -295,7 +329,9 @@ export class MoviesService {
     const segmentPath = path.join(hlsPath, `output_${quality}_${segment}`);
 
     if (!fs.existsSync(segmentPath)) {
-      throw new NotFoundException(`Segment not found: output_${quality}_${segment}`);
+      throw new NotFoundException(
+        `Segment not found: output_${quality}_${segment}`
+      );
     }
 
     res.setHeader('Content-Type', 'video/mp2t');
@@ -303,7 +339,11 @@ export class MoviesService {
     res.sendFile(segmentPath);
   }
 
-  async getOutputFile(imdbId: string, filename: string, res: Response): Promise<void> {
+  async getOutputFile(
+    imdbId: string,
+    filename: string,
+    res: Response
+  ): Promise<void> {
     const movie = await this.findByImdbId(imdbId);
     if (!movie) {
       throw new NotFoundException('Movie not found');
@@ -317,8 +357,8 @@ export class MoviesService {
     }
 
     // Determine content type based on file extension
-    const contentType = filename.endsWith('.m3u8') 
-      ? 'application/vnd.apple.mpegurl' 
+    const contentType = filename.endsWith('.m3u8')
+      ? 'application/vnd.apple.mpegurl'
       : 'video/mp2t';
 
     res.setHeader('Content-Type', contentType);
@@ -326,7 +366,11 @@ export class MoviesService {
     res.sendFile(filePath);
   }
 
-  async getQualityPlaylist(imdbId: string, quality: string, res: Response): Promise<void> {
+  async getQualityPlaylist(
+    imdbId: string,
+    quality: string,
+    res: Response
+  ): Promise<void> {
     const movie = await this.findByImdbId(imdbId);
     if (!movie) {
       throw new NotFoundException('Movie not found');
@@ -344,7 +388,12 @@ export class MoviesService {
     res.sendFile(playlistPath);
   }
 
-  async getSegment(imdbId: string, quality: string, segment: string, res: Response): Promise<void> {
+  async getSegment(
+    imdbId: string,
+    quality: string,
+    segment: string,
+    res: Response
+  ): Promise<void> {
     const movie = await this.findByImdbId(imdbId);
     if (!movie) {
       throw new NotFoundException('Movie not found');
@@ -362,14 +411,22 @@ export class MoviesService {
     res.sendFile(segmentPath);
   }
 
-  async getThumbnail(imdbId: string, thumbnailId: string, res: Response): Promise<void> {
+  async getThumbnail(
+    imdbId: string,
+    thumbnailId: string,
+    res: Response
+  ): Promise<void> {
     const movie = await this.findByImdbId(imdbId);
     if (!movie) {
       throw new NotFoundException('Movie not found');
     }
 
     const hlsPath = this.getMovieHlsPath(imdbId);
-    const thumbnailPath = path.join(hlsPath, 'thumbnails', `${thumbnailId}.png`);
+    const thumbnailPath = path.join(
+      hlsPath,
+      'thumbnails',
+      `${thumbnailId}.png`
+    );
 
     if (!fs.existsSync(thumbnailPath)) {
       throw new NotFoundException(`Thumbnail not found: ${thumbnailId}`);

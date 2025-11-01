@@ -28,16 +28,16 @@ export class MovieDto {
   @ApiProperty({ required: false })
   trailerUrl?: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     enum: ['downloading', 'transcoding', 'ready', 'error'],
-    example: 'ready'
+    example: 'ready',
   })
   status: 'downloading' | 'transcoding' | 'ready' | 'error';
 
-  @ApiProperty({ 
-    required: false, 
+  @ApiProperty({
+    required: false,
     example: true,
-    description: 'Whether the movie can be streamed (enough segments buffered)' 
+    description: 'Whether the movie can be streamed (enough segments buffered)',
   })
   canStream?: boolean;
 

@@ -51,7 +51,10 @@ export class MovieDownloadMonitor {
     this.startMonitoring();
   }
 
-  private async callAria2(method: string, params: unknown[] = []): Promise<unknown> {
+  private async callAria2(
+    method: string,
+    params: unknown[] = []
+  ): Promise<unknown> {
     try {
       const response = await axios.post(this.aria2Url, {
         jsonrpc: '2.0',
@@ -164,9 +167,11 @@ export class MovieDownloadMonitor {
           const ext = path.extname(file.path).toLowerCase();
           if (videoExtensions.includes(ext)) {
             const fileSize = parseInt(file.length);
-            if (fileSize > 10 * 1024 * 1024 && 
-                file.path.startsWith(downloadPath) && 
-                fs.existsSync(file.path)) {
+            if (
+              fileSize > 10 * 1024 * 1024 &&
+              file.path.startsWith(downloadPath) &&
+              fs.existsSync(file.path)
+            ) {
               console.log(`[MONITOR] Found video via Aria2: ${file.path}`);
               return file.path;
             }
@@ -179,16 +184,18 @@ export class MovieDownloadMonitor {
           const itemPath = path.join(downloadPath, item);
           return fs.statSync(itemPath).isDirectory();
         });
-        
+
         const normalizedTitle = movieTitle
           .toLowerCase()
           .replace(/[^a-z0-9]/g, '');
-        
+
         const matchingDir = subdirs.find(dir => {
           const normalizedDir = dir.toLowerCase().replace(/[^a-z0-9]/g, '');
           return (
-            (normalizedDir.includes(normalizedTitle) && normalizedTitle.length >= 10) ||
-            (normalizedTitle.includes(normalizedDir) && normalizedDir.length >= 10)
+            (normalizedDir.includes(normalizedTitle) &&
+              normalizedTitle.length >= 10) ||
+            (normalizedTitle.includes(normalizedDir) &&
+              normalizedDir.length >= 10)
           );
         });
 
@@ -596,7 +603,9 @@ export class MovieDownloadMonitor {
 
       await this.checkForCompletedTranscoding();
 
-      const activeDownloads = await this.callAria2('tellActive') as AriaDownload[];
+      const activeDownloads = (await this.callAria2(
+        'tellActive'
+      )) as AriaDownload[];
       console.log(`[MONITOR] Found ${activeDownloads.length} active downloads`);
 
       for (const download of activeDownloads) {
@@ -647,7 +656,10 @@ export class MovieDownloadMonitor {
         }
       }
 
-      const completedDownloads = await this.callAria2('tellStopped', [0, 10]) as AriaDownload[];
+      const completedDownloads = (await this.callAria2(
+        'tellStopped',
+        [0, 10]
+      )) as AriaDownload[];
       console.log(
         `[MONITOR] Found ${completedDownloads.length} completed downloads`
       );

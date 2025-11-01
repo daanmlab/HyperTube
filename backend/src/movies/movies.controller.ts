@@ -16,9 +16,9 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { Response } from 'express';
+import type { Response } from 'express';
 import { Public } from '../auth/decorators/public.decorator';
-import { AriaService } from './aria/aria.service';
+import type { AriaService } from './aria/aria.service';
 import {
   DeleteResponseDto,
   MessageResponseDto,
@@ -26,9 +26,9 @@ import {
   SearchResponseDto,
   StartDownloadResponseDto,
 } from './dto';
-import { MoviesService } from './movies.service';
-import { TpbService } from './tpb/tpb.service';
-import { YtsService } from './yts/yts.service';
+import type { MoviesService } from './movies.service';
+import type { TpbService } from './tpb/tpb.service';
+import type { YtsService } from './yts/yts.service';
 
 @ApiTags('movies')
 @Controller('movies')
@@ -301,12 +301,12 @@ export class MoviesController {
             const qualities = ['480p', '720p'];
             let totalProgress = 0;
             const minSegmentsForStreaming = 30; // ~5 minutes at 10s/segment (adjustable)
-            
+
             // Try to read metadata to get actual duration
             const metadataPath = path.join(hlsDir, 'metadata.json');
             let videoDuration = 11558; // Default ~3hr video duration in seconds
-            let segmentTime = 10; // Updated to 10 seconds to match worker settings
-            
+            const segmentTime = 10; // Updated to 10 seconds to match worker settings
+
             if (fs.existsSync(metadataPath)) {
               try {
                 const metadataContent = fs.readFileSync(metadataPath, 'utf8');
@@ -315,12 +315,16 @@ export class MoviesController {
                   videoDuration = metadata.duration;
                 }
               } catch (err) {
-                console.log(`[PROGRESS] Could not read metadata, using defaults`);
+                console.log(
+                  `[PROGRESS] Could not read metadata, using defaults`
+                );
               }
             }
-            
+
             const expectedSegments = Math.ceil(videoDuration / segmentTime);
-            console.log(`[PROGRESS] ${movie.imdbId} - Expected segments: ${expectedSegments} (duration: ${videoDuration}s, segment: ${segmentTime}s)`);
+            console.log(
+              `[PROGRESS] ${movie.imdbId} - Expected segments: ${expectedSegments} (duration: ${videoDuration}s, segment: ${segmentTime}s)`
+            );
 
             for (let i = 0; i < qualities.length; i++) {
               const quality = qualities[i];
@@ -336,13 +340,21 @@ export class MoviesController {
                 let isQualityComplete = false;
                 if (fs.existsSync(playlistPath)) {
                   try {
-                    const playlistContent = fs.readFileSync(playlistPath, 'utf8');
-                    isQualityComplete = playlistContent.includes('#EXT-X-ENDLIST');
+                    const playlistContent = fs.readFileSync(
+                      playlistPath,
+                      'utf8'
+                    );
+                    isQualityComplete =
+                      playlistContent.includes('#EXT-X-ENDLIST');
                   } catch {}
                 }
 
                 console.log(
-                  `[PROGRESS] ${movie.imdbId} - ${quality}: ${currentSegments} segments${isQualityComplete ? ' (COMPLETE)' : ''}`
+                  `[PROGRESS] ${
+                    movie.imdbId
+                  } - ${quality}: ${currentSegments} segments${
+                    isQualityComplete ? ' (COMPLETE)' : ''
+                  }`
                 );
 
                 // Check if we have enough segments for streaming (at least one quality)
@@ -359,7 +371,7 @@ export class MoviesController {
                     100,
                     (currentSegments / expectedSegments) * 100
                   );
-                  
+
                   // If quality is complete, set progress to 100%
                   if (isQualityComplete) {
                     qualityProgress = 100;
@@ -443,7 +455,10 @@ export class MoviesController {
         videoPath: movie.videoPath,
         transcodeProgress: transcodeProgress,
         currentQuality: currentQuality || undefined,
-        currentQualityProgress: currentQualityProgress > 0 ? currentQualityProgress.toString() : undefined,
+        currentQualityProgress:
+          currentQualityProgress > 0
+            ? currentQualityProgress.toString()
+            : undefined,
         availableQualities: this.safeJsonParse(movie.availableQualities),
         metadata: movie.metadata,
         errorMessage: movie.errorMessage,
@@ -538,7 +553,7 @@ export class MoviesController {
               if (currentSegments > 0) {
                 // Get video metadata to calculate expected segments
                 const metadataPath = path.join(hlsDir, 'metadata.json');
-                let expectedSegments = 2889; // Default based on ~3hr video with 4s segments
+                const expectedSegments = 2889; // Default based on ~3hr video with 4s segments
 
                 // Calculate progress for this quality (each quality gets 50% of total)
                 const qualityWeight = 50; // Each quality is 50% of total progress

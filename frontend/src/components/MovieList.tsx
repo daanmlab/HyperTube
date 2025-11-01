@@ -9,7 +9,8 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Film, Play, RefreshCw, Search } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import type React from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 interface Movie {
@@ -87,22 +88,24 @@ export const MovieList: React.FC = () => {
       case 'transcoding': {
         // Show per-quality progress if available
         if (movie.currentQuality && movie.currentQualityProgress) {
-          const qualityProgress = parseFloat(movie.currentQualityProgress || '0').toFixed(0);
+          const qualityProgress = parseFloat(
+            movie.currentQualityProgress || '0'
+          ).toFixed(0);
           const streamText = movie.canStream ? ' (Streaming available!)' : '';
           return `Transcoding ${movie.currentQuality} - ${qualityProgress}%${streamText}`;
         }
-        
+
         // Fallback to old behavior
         const progress = parseFloat(movie.transcodeProgress || '0').toFixed(0);
         const currentProgress = parseFloat(progress);
         let transcodeQuality = '';
-        
+
         if (currentProgress < 50) {
           transcodeQuality = '480p'; // First half = 480p
         } else {
           transcodeQuality = '720p'; // Second half = 720p
         }
-        
+
         const streamText = movie.canStream ? ' (Streaming available!)' : '';
         return `Transcoding ${transcodeQuality} - ${progress}%${streamText}`;
       }
@@ -121,10 +124,7 @@ export const MovieList: React.FC = () => {
 
   const isPlayable = (movie: Movie) => {
     // Allow streaming if movie is ready OR if canStream flag is true (progressive streaming)
-    return (
-      movie.status === 'ready' ||
-      movie.canStream === true
-    );
+    return movie.status === 'ready' || movie.canStream === true;
   };
 
   return (
