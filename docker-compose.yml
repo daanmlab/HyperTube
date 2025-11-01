@@ -75,16 +75,18 @@ services:
       - videos:/app/videos
       - ./downloads:/downloads
     # CPU and Memory resource allocation for optimal transcoding performance
-    # Your system has 8 CPU cores - giving worker priority access
+    # Your system has 8 CPU cores - distributing across 3 worker instances
     deploy:
+      # Run 3 worker instances in parallel for concurrent transcoding
+      replicas: 3
       resources:
         limits:
-          cpus: "8" # Allow worker to use all 8 CPU cores
-          memory: 4G # 4GB memory limit (adjust based on your system RAM)
+          cpus: "2.5" # Each worker can use up to 2.5 CPU cores (3 workers = ~7.5 cores total)
+          memory: 1.5G # 1.5GB memory limit per worker (4.5GB total for all workers)
         reservations:
-          cpus: "4" # Reserve at least 4 CPU cores for worker (50% of total)
-          memory: 2G # Reserve at least 2GB memory
-    # Set higher CPU priority for worker container
+          cpus: "1.5" # Reserve at least 1.5 CPU cores per worker
+          memory: 768M # Reserve at least 768MB memory per worker
+    # Set higher CPU priority for worker containers
     cpu_shares: 2048 # Default is 1024, this gives 2x priority
     # Uncomment the following lines if running on Linux with Intel/AMD GPU for hardware acceleration
     # devices:
