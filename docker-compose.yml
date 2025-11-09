@@ -13,15 +13,14 @@ services:
     volumes:
       - /app/node_modules
       - videos:/app/videos
-    # Limit API resources to leave more CPU for worker
+    # Now handles transcoding in-process with child_process
     deploy:
       resources:
         limits:
-          cpus: "1"
-          memory: 512M
+          cpus: "4"
+          memory: 2G
     depends_on:
       - db
-      - redis
     develop:
       watch:
         - action: sync
@@ -67,46 +66,6 @@ services:
           target: /app/tsconfig.json
         - action: rebuild
           path: ./frontend/package*.json
-  worker:
-    build: ./worker
-    env_file: .env
-    volumes:
-      - /app/node_modules
-      - videos:/app/videos
-      - ./downloads:/downloads
-    # CPU and Memory resource allocation for optimal transcoding performance
-    # Your system has 8 CPU cores - distributing across 3 worker instances
-    deploy:
-      # Run 3 worker instances in parallel for concurrent transcoding
-      replicas: 3
-      resources:
-        limits:
-          cpus: "2.5" # Each worker can use up to 2.5 CPU cores (3 workers = ~7.5 cores total)
-          memory: 1.5G # 1.5GB memory limit per worker (4.5GB total for all workers)
-        reservations:
-          cpus: "1.5" # Reserve at least 1.5 CPU cores per worker
-          memory: 768M # Reserve at least 768MB memory per worker
-    # Set higher CPU priority for worker containers
-    cpu_shares: 2048 # Default is 1024, this gives 2x priority
-    # Uncomment the following lines if running on Linux with Intel/AMD GPU for hardware acceleration
-    # devices:
-    #   - /dev/dri:/dev/dri
-    # group_add:
-    #   - video
-    depends_on:
-      - db
-      - redis
-      - aria2
-    develop:
-      watch:
-        - action: sync
-          path: ./worker/src
-          target: /app/src
-        - action: sync
-          path: ./worker/tsconfig.json
-          target: /app/tsconfig.json
-        - action: rebuild
-          path: ./worker/package*.json
   db:
     image: postgres:12-alpine
     restart: always
@@ -115,10 +74,6 @@ services:
     env_file: .env
     volumes:
       - pgdata:/var/lib/postgresql/data
-  redis:
-    image: redis:8-alpine
-    ports:
-      - "6379:6379"
   aria2:
     image: p3terx/aria2-pro
     container_name: aria2

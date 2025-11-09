@@ -1,9 +1,8 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import type { Response } from 'express';
 import * as fs from 'fs';
-import Redis from 'ioredis';
+
 import * as path from 'path';
 import type { Repository } from 'typeorm';
 import { Movie, MovieStatus, type TorrentQuality } from '../entities/movie.entity';
@@ -71,89 +70,11 @@ const QUALITY_VARIANTS: readonly QualityVariant[] = [
 @Injectable()
 export class MoviesService {
   private readonly logger = new Logger(MoviesService.name);
-  private readonly redis: Redis;
 
   constructor(
     @InjectRepository(Movie)
     private readonly movieRepository: Repository<Movie>,
-  ) {
-    this.redis = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: Number.parseInt(process.env.REDIS_PORT || '6379', 10),
-    });
-  }
-
-  /**
-   * Cron job that syncs transcode status from Redis to database
-   * Runs every 5 seconds to keep movie status up-to-date
-   */
-  @Cron(CronExpression.EVERY_5_SECONDS, { name: 'syncTranscodeStatus' })
-  async syncTranscodeStatusFromRedis(): Promise<void> {
-    const transcodingMovies = await this.movieRepository.find({
-      where: { status: MovieStatus.TRANSCODING },
-    });
-
-    await Promise.all(transcodingMovies.map((movie) => this.syncMovieStatus(movie)));
-  }
-
-  /**
-   * Syncs a single movie's status from Redis
-   */
-  private async syncMovieStatus(movie: Movie): Promise<void> {
-    try {
-      const redisKey = `video_status:${movie.imdbId}`;
-      const statusData = await this.redis.get(redisKey);
-
-      if (!statusData) {
-        return;
-      }
-
-      const status = JSON.parse(statusData);
-
-      if (status.status === 'error') {
-        await this.handleTranscodeError(movie, status);
-      } else if (status.status === 'complete') {
-        await this.handleTranscodeComplete(movie);
-      } else if (status.progress !== undefined) {
-        await this.updateMovieProgress(movie, status.progress);
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      const errorStack = error instanceof Error ? error.stack : undefined;
-      this.logger.error(`Error syncing status for ${movie.imdbId}: ${errorMessage}`, errorStack);
-    }
-  }
-
-  /**
-   * Handles transcode error status from Redis
-   */
-  private async handleTranscodeError(
-    movie: Movie,
-    status: { error?: string; message?: string },
-  ): Promise<void> {
-    movie.status = MovieStatus.ERROR;
-    movie.errorMessage = status.error || status.message || 'Transcoding failed';
-    await this.movieRepository.save(movie);
-    this.logger.log(`Updated ${movie.imdbId} to error status: ${movie.errorMessage}`);
-  }
-
-  /**
-   * Handles transcode completion status from Redis
-   */
-  private async handleTranscodeComplete(movie: Movie): Promise<void> {
-    movie.status = MovieStatus.READY;
-    movie.transcodeProgress = 100;
-    await this.movieRepository.save(movie);
-    this.logger.log(`Updated ${movie.imdbId} to ready status`);
-  }
-
-  /**
-   * Updates movie transcode progress
-   */
-  private async updateMovieProgress(movie: Movie, progress: number): Promise<void> {
-    movie.transcodeProgress = progress;
-    await this.movieRepository.save(movie);
-  }
+  ) {}
 
   /**
    * Creates a new movie or updates an existing one
@@ -328,6 +249,199 @@ export class MoviesService {
     movie.status = MovieStatus.ERROR;
     movie.errorMessage = errorMessage;
     this.logger.error(`Movie ${imdbId} encountered error: ${errorMessage}`);
+    return this.movieRepository.save(movie);
+  }
+
+  /**
+   * Updates the lastWatchedAt timestamp for a movie
+   */
+  async updateLastWatched(imdbId: string): Promise<Movie | null> {
+    const movie = await this.findByImdbId(imdbId);
+    if (!movie) {
+      this.logger.warn(`Movie not found for lastWatchedAt update: ${imdbId}`);
+      return null;
+    }
+
+    movie.lastWatchedAt = new Date();
+    return this.movieRepository.save(movie);
+  }
+
+  /**
+   * Triggers on-demand MP4 transcoding for a movie
+   * Runs asynchronously in the background using child_process
+   */
+  async triggerTranscoding(imdbId: string, inputPath: string): Promise<void> {
+    const outputPath = path.join('/app/videos', `${imdbId}.mp4`);
+    const tempPath = path.join('/app/videos', `${imdbId}_temp.mp4`);
+
+    this.logger.log(`Starting transcoding for ${imdbId}: ${inputPath} -> ${outputPath}`);
+
+    // Update status
+    await this.updateStatus(imdbId, MovieStatus.TRANSCODING);
+
+    // Run transcoding in background (non-blocking)
+    this.transcodeInBackground(imdbId, inputPath, tempPath, outputPath);
+  }
+
+  /**
+   * Transcode video using FFmpeg child process
+   * Runs asynchronously without blocking the request
+   */
+  private transcodeInBackground(
+    imdbId: string,
+    inputPath: string,
+    tempPath: string,
+    finalPath: string,
+  ): void {
+    // Run async after a tick to not block the response
+    setImmediate(async () => {
+      try {
+        await this.transcodeMovie(imdbId, inputPath, tempPath, finalPath);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        this.logger.error(`Transcoding failed for ${imdbId}: ${errorMessage}`);
+        await this.setError(imdbId, `Transcoding failed: ${errorMessage}`);
+      }
+    });
+  }
+
+  /**
+   * Execute FFmpeg transcoding using child_process
+   */
+  private async transcodeMovie(
+    imdbId: string,
+    inputPath: string,
+    tempPath: string,
+    finalPath: string,
+  ): Promise<void> {
+    const { spawn } = await import('child_process');
+
+    return new Promise((resolve, reject) => {
+      // Validate input file
+      if (!fs.existsSync(inputPath)) {
+        reject(new Error(`Input file not found: ${inputPath}`));
+        return;
+      }
+
+      const stats = fs.statSync(inputPath);
+      if (stats.size === 0) {
+        reject(new Error(`Input file is empty: ${inputPath}`));
+        return;
+      }
+
+      this.logger.log(`Input validated: ${stats.size} bytes`);
+
+      // Spawn FFmpeg process
+      const ffmpeg = spawn('ffmpeg', [
+        '-i',
+        inputPath,
+        '-c:v',
+        'libx264',
+        '-preset',
+        'veryfast', // Fast encoding
+        '-crf',
+        '23', // Good quality
+        '-c:a',
+        'aac',
+        '-b:a',
+        '192k',
+        '-ac',
+        '2',
+        '-ar',
+        '44100',
+        '-movflags',
+        '+faststart', // Web streaming optimization
+        '-pix_fmt',
+        'yuv420p', // Browser compatibility
+        '-vf',
+        'scale=1280:720', // 720p
+        '-y', // Overwrite output
+        tempPath,
+      ]);
+
+      let lastProgress = 0;
+
+      // Parse FFmpeg stderr for progress
+      ffmpeg.stderr.on('data', async (data: Buffer) => {
+        const output = data.toString();
+
+        // Extract time progress: time=00:01:23.45
+        const timeMatch = output.match(/time=(\d{2}):(\d{2}):(\d{2})/);
+        if (timeMatch) {
+          const hours = parseInt(timeMatch[1]);
+          const minutes = parseInt(timeMatch[2]);
+          const seconds = parseInt(timeMatch[3]);
+          const currentSeconds = hours * 3600 + minutes * 60 + seconds;
+
+          // Estimate progress (assuming ~2 hour movie = 7200 seconds)
+          const estimatedDuration = 7200;
+          const progress = Math.min(95, Math.round((currentSeconds / estimatedDuration) * 100));
+
+          // Update every 5%
+          if (progress >= lastProgress + 5) {
+            lastProgress = progress;
+            this.logger.log(`Transcoding ${imdbId}: ${progress}%`);
+            await this.updateTranscodeProgress(imdbId, progress);
+          }
+        }
+      });
+
+      ffmpeg.on('close', async (code) => {
+        if (code === 0) {
+          this.logger.log(`✅ Transcoding complete for ${imdbId}`);
+
+          // Rename temp to final
+          try {
+            fs.renameSync(tempPath, finalPath);
+            this.logger.log(`Renamed ${tempPath} -> ${finalPath}`);
+
+            // Update database
+            await this.updateCache(imdbId, finalPath, true);
+            await this.updateTranscodeProgress(imdbId, 100);
+
+            resolve();
+          } catch (error) {
+            reject(error);
+          }
+        } else {
+          this.logger.error(`❌ FFmpeg exited with code ${code}`);
+
+          // Cleanup temp file
+          if (fs.existsSync(tempPath)) {
+            fs.unlinkSync(tempPath);
+          }
+
+          reject(new Error(`FFmpeg exited with code ${code}`));
+        }
+      });
+
+      ffmpeg.on('error', (error) => {
+        this.logger.error(`FFmpeg spawn error: ${error.message}`);
+        reject(error);
+      });
+    });
+  }
+
+  /**
+   * Updates MP4 cache information after transcoding completes
+   */
+  async updateCache(
+    imdbId: string,
+    transcodedPath: string,
+    isFullyTranscoded: boolean,
+  ): Promise<Movie | null> {
+    const movie = await this.findByImdbId(imdbId);
+    if (!movie) {
+      this.logger.warn(`Movie not found for cache update: ${imdbId}`);
+      return null;
+    }
+
+    movie.transcodedPath = transcodedPath;
+    movie.isFullyTranscoded = isFullyTranscoded;
+    movie.cacheCreatedAt = new Date();
+    movie.status = MovieStatus.READY;
+
+    this.logger.log(`Cache updated for ${imdbId}: ${transcodedPath}`);
     return this.movieRepository.save(movie);
   }
 

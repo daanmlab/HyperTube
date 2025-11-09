@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import type { Response } from 'express';
-import Redis from 'ioredis';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { VideoStatusResponseDto } from './dto/video-status-response.dto';
@@ -74,62 +73,20 @@ const DEFAULT_QUALITIES: QualityLevel[] = [
 @Injectable()
 export class VideosService {
   private readonly videosDir = '/app/videos';
-  private readonly redis = new Redis({
-    host: process.env.REDIS_HOST,
-    port: Number(process.env.REDIS_PORT || 6379),
-  });
 
   handleUpload(file: Express.Multer.File, options?: TranscodingOptions): VideoUploadResponseDto {
-    // Enhanced job with transcoding options
-    const enhancedJob = {
-      type: 'processVideo',
-      inputPath: file.path,
-      outputDir: path.join(this.videosDir, file.filename + '_hls'),
-      videoId: file.filename,
-      options: {
-        qualities: DEFAULT_QUALITIES,
-        segmentTime: 10,
-        transpose: 1,
-        audioCodec: 'aac',
-        videoCodec: 'libx264',
-        preset: 'fast',
-        crf: 23,
-        enableThumbnails: true,
-        enablePreview: false,
-        ...options,
-      },
-    };
-
-    this.redis.rpush('jobs', JSON.stringify(enhancedJob));
-
+    // NOTE: This HLS upload feature is deprecated. Use movie streaming instead.
     return {
       filename: file.filename,
       path: file.path,
-      status: 'uploaded',
-      message: 'Video uploaded successfully and queued for processing',
+      status: 'error',
+      message: 'Video upload is deprecated. Use movie streaming instead.',
     };
   }
 
   async getVideoStatus(videoId: string): Promise<VideoStatusResponseDto> {
     try {
-      const statusJson = await this.redis.get(`video_status:${videoId}`);
-      if (statusJson) {
-        const parsed = JSON.parse(statusJson);
-        // Ensure the parsed data matches our DTO structure
-        return {
-          status: parsed.status || 'processing',
-          progress: parsed.progress || 0,
-          message: parsed.message || 'Processing video...',
-          availableForStreaming: parsed.availableForStreaming || false,
-          availableQualities: parsed.availableQualities || [],
-          completedQualities: parsed.completedQualities || 0,
-          totalQualities: parsed.totalQualities || 4,
-          estimatedTimeRemaining: parsed.estimatedTimeRemaining,
-          error: parsed.error,
-        };
-      }
-
-      // Fallback to file system check
+      // File system check only (Redis removed)
       const hlsDir = path.join(this.videosDir, videoId + '_hls');
       const playlistPath = path.join(hlsDir, 'output.m3u8');
       const originalPath = path.join(this.videosDir, videoId);
@@ -217,16 +174,6 @@ export class VideosService {
             // Ignore stat errors
           }
 
-          let enhancedStatus = null;
-          try {
-            const statusJson = await this.redis.get(`video_status:${videoId}`);
-            if (statusJson) {
-              enhancedStatus = JSON.parse(statusJson);
-            }
-          } catch (e) {
-            // Ignore Redis errors
-          }
-
           return {
             id: videoId,
             filename: videoId,
@@ -239,7 +186,7 @@ export class VideosService {
             createdAt: fs.existsSync(originalPath)
               ? fs.statSync(originalPath).birthtime.toISOString()
               : new Date().toISOString(),
-            enhancedStatus,
+            enhancedStatus: null,
           };
         });
 
@@ -397,24 +344,15 @@ export class VideosService {
     }
   }
 
-  async getVideoMetadata(videoId: string) {
-    try {
-      const statusJson = await this.redis.get(`video_status:${videoId}`);
-      if (statusJson) {
-        const status = JSON.parse(statusJson);
-        return status.metadata || null;
-      }
-      return null;
-    } catch (error) {
-      console.error('Error getting video metadata:', error);
-      return null;
-    }
+  async getVideoMetadata(_videoId: string) {
+    // Redis removed - metadata not available
+    return null;
   }
 
   async deleteVideo(videoId: string) {
     try {
       const originalPath = path.join(this.videosDir, videoId);
-      const hlsDir = path.join(this.videosDir, videoId + '_hls');
+      const hlsDir = path.join(this.videosDir, `${videoId}_hls`);
 
       if (fs.existsSync(originalPath)) {
         fs.unlinkSync(originalPath);
@@ -424,8 +362,6 @@ export class VideosService {
         fs.rmSync(hlsDir, { recursive: true, force: true });
       }
 
-      await this.redis.del(`video_status:${videoId}`);
-
       return { success: true, message: 'Video deleted successfully' };
     } catch (error) {
       console.error('Error deleting video:', error);
@@ -434,18 +370,10 @@ export class VideosService {
   }
 
   async getWorkerHealth() {
-    try {
-      const healthJson = await this.redis.get('worker_health');
-      if (healthJson) {
-        return JSON.parse(healthJson);
-      }
-      return {
-        status: 'unknown',
-        message: 'Worker health status not available',
-      };
-    } catch (error) {
-      console.error('Error getting worker health:', error);
-      return { status: 'error', message: 'Failed to get worker health' };
-    }
+    // Worker service removed
+    return {
+      status: 'deprecated',
+      message: 'Worker service has been removed. Transcoding now happens in-process.',
+    };
   }
 }
