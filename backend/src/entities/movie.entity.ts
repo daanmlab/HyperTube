@@ -89,6 +89,16 @@ export class Movie {
   @Column({ type: 'jsonb', nullable: true })
   metadata?: any;
 
+  // MP4 Cache fields
+  @Column({ nullable: true })
+  transcodedPath?: string;
+
+  @Column({ default: false })
+  isFullyTranscoded: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  cacheCreatedAt?: Date;
+
   @Column({ nullable: true })
   errorMessage?: string;
 

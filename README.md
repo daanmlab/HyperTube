@@ -1,5 +1,13 @@
 # HyperTube
 
+A Netflix-like streaming platform with torrent-based content delivery.
+
+## 📚 Documentation
+
+- **[STREAMING_FLOW.md](./STREAMING_FLOW.md)** - Complete streaming architecture and flowchart
+- **[TODO.md](./TODO.md)** - Detailed implementation tasks with time estimates
+- **[IMPLEMENTATION_GAP.md](./IMPLEMENTATION_GAP.md)** - Gap analysis between current state and target architecture
+
 ## Docker Watch Development
 
 This project is configured with Docker watch for efficient development. Docker watch automatically syncs file changes and rebuilds containers when necessary.

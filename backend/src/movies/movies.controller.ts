@@ -1,17 +1,24 @@
 import {
+  Body,
   Controller,
   Delete,
   Get,
+  Headers,
   HttpException,
   HttpStatus,
   Param,
   Post,
   Query,
+  Req,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiExtraModels, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
+import * as fs from 'fs';
 import { Public } from '../auth/decorators/public.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { MovieStatus } from '../entities/movie.entity';
 import { AriaService } from './aria/aria.service';
 import {
   DeleteResponseDto,
@@ -717,6 +724,125 @@ export class MoviesController {
 
     await this.moviesService.deleteAllMovies();
     return { message: 'All movies deleted successfully' };
+  }
+
+  // MP4 Streaming endpoint
+  @Get(':imdbId/stream')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Stream movie as MP4 with Range support' })
+  @ApiResponse({ status: 200, description: 'MP4 video stream' })
+  @ApiResponse({ status: 404, description: 'Movie not found' })
+  @ApiResponse({ status: 409, description: 'Movie still downloading or transcoding' })
+  async streamMovie(
+    @Param('imdbId') imdbId: string,
+    @Headers('range') range: string,
+    @Res() res: Response,
+  ) {
+    const movie = await this.moviesService.findByImdbId(imdbId);
+
+    if (!movie) {
+      throw new HttpException('Movie not found', HttpStatus.NOT_FOUND);
+    }
+
+    // Update lastWatchedAt
+    await this.moviesService.updateLastWatched(imdbId);
+
+    // Check if MP4 cache exists
+    if (movie.transcodedPath && fs.existsSync(movie.transcodedPath)) {
+      return this.serveCachedMP4(movie.transcodedPath, range, res);
+    }
+
+    // Check if download is complete
+    if (movie.status === MovieStatus.DOWNLOADING) {
+      throw new HttpException(
+        'Movie is still downloading. Please wait.',
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    // Check if currently transcoding
+    if (movie.status === MovieStatus.TRANSCODING) {
+      throw new HttpException(
+        `Movie is being transcoded. Progress: ${movie.transcodeProgress}%`,
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    // Check if video file exists
+    const videoPath = movie.downloadPath || movie.videoPath;
+    if (!videoPath || !fs.existsSync(videoPath)) {
+      throw new HttpException('Video file not found', HttpStatus.NOT_FOUND);
+    }
+
+    // Trigger on-demand transcoding
+    await this.moviesService.triggerTranscoding(imdbId, videoPath);
+
+    // Return status that transcoding has started
+    return res.status(HttpStatus.ACCEPTED).json({
+      message: 'Transcoding started. Please check back in a few moments.',
+      status: 'transcoding',
+      progress: 0,
+    });
+  }
+
+  /**
+   * Helper method to serve cached MP4 files with Range support
+   */
+  private serveCachedMP4(filePath: string, range: string, res: Response): void {
+    const stat = fs.statSync(filePath);
+    const fileSize = stat.size;
+
+    if (range) {
+      const parts = range.replace(/bytes=/, '').split('-');
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      const chunkSize = end - start + 1;
+
+      res.writeHead(206, {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunkSize,
+        'Content-Type': 'video/mp4',
+        'Access-Control-Allow-Origin': '*',
+      });
+
+      const stream = fs.createReadStream(filePath, { start, end });
+      stream.pipe(res);
+    } else {
+      res.writeHead(200, {
+        'Content-Length': fileSize,
+        'Content-Type': 'video/mp4',
+        'Accept-Ranges': 'bytes',
+        'Access-Control-Allow-Origin': '*',
+      });
+
+      const stream = fs.createReadStream(filePath);
+      stream.pipe(res);
+    }
+  }
+
+  @Post('update-cache')
+  @ApiOperation({ summary: 'Update MP4 cache information after transcoding' })
+  @ApiResponse({
+    status: 200,
+    description: 'Cache updated',
+    type: MessageResponseDto,
+  })
+  async updateCache(
+    @Body()
+    body: {
+      imdbId: string;
+      transcodedPath: string;
+      isFullyTranscoded: boolean;
+    },
+  ): Promise<MessageResponseDto> {
+    await this.moviesService.updateCache(
+      body.imdbId,
+      body.transcodedPath,
+      body.isFullyTranscoded,
+    );
+
+    return { message: 'Cache updated successfully' };
   }
 
   // HLS Streaming endpoints for movies
