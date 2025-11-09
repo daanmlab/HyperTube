@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import Redis from 'ioredis';
 import { YtsService } from '../yts/yts.service';
 
 export interface SearchResult {
@@ -34,15 +33,10 @@ export interface SearchStats {
 @Injectable()
 export class OptimizedSearchService {
   private readonly logger = new Logger(OptimizedSearchService.name);
-  private readonly redis: Redis;
-  private readonly CACHE_TTL = 3600; // 1 hour cache
+  private readonly cache = new Map<string, { data: SearchResult[]; timestamp: number }>();
+  private readonly CACHE_TTL = 3600 * 1000; // 1 hour cache in milliseconds
 
-  constructor(private readonly ytsService: YtsService) {
-    this.redis = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: Number.parseInt(process.env.REDIS_PORT || '6379', 10),
-    });
-  }
+  constructor(private readonly ytsService: YtsService) {}
 
   /**
    * Generate cache key for search query
@@ -59,25 +53,21 @@ export class OptimizedSearchService {
     const cacheKey = this.getCacheKey(keywords, page);
 
     // Check cache first
-    try {
-      const cached = await this.redis.get(cacheKey);
-      if (cached) {
-        const data = JSON.parse(cached);
-        const responseTime = Date.now() - startTime;
-        this.logger.log(`Cache HIT for "${keywords}" (${responseTime}ms)`);
+    const cached = this.cache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+      const data = cached.data;
+      const responseTime = Date.now() - startTime;
+      this.logger.log(`Cache HIT for "${keywords}" (${responseTime}ms)`);
 
-        return {
-          data,
-          stats: {
-            totalResults: data.length,
-            cacheHit: true,
-            responseTime,
-            sources: [...new Set(data.map((r: SearchResult) => r.api || 'unknown') as string[])],
-          },
-        };
-      }
-    } catch (err) {
-      this.logger.warn(`Cache read error: ${err}`);
+      return {
+        data,
+        stats: {
+          totalResults: data.length,
+          cacheHit: true,
+          responseTime,
+          sources: [...new Set(data.map((r: SearchResult) => r.api || 'unknown') as string[])],
+        },
+      };
     }
 
     // Search from multiple sources in parallel
@@ -87,11 +77,7 @@ export class OptimizedSearchService {
     const responseTime = Date.now() - startTime;
 
     // Cache the results
-    try {
-      await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(results));
-    } catch (err) {
-      this.logger.warn(`Cache write error: ${err}`);
-    }
+    this.cache.set(cacheKey, { data: results, timestamp: Date.now() });
 
     return {
       data: results,
@@ -208,18 +194,19 @@ export class OptimizedSearchService {
    */
   async clearCache(keywords?: string): Promise<void> {
     if (keywords) {
-      const pattern = `search:${keywords.toLowerCase().trim()}:*`;
-      const keys = await this.redis.keys(pattern);
-      if (keys.length > 0) {
-        await this.redis.del(...keys);
-        this.logger.log(`Cleared ${keys.length} cache entries for "${keywords}"`);
+      const prefix = `search:${keywords.toLowerCase().trim()}:`;
+      let cleared = 0;
+      for (const key of this.cache.keys()) {
+        if (key.startsWith(prefix)) {
+          this.cache.delete(key);
+          cleared++;
+        }
       }
+      this.logger.log(`Cleared ${cleared} cache entries for "${keywords}"`);
     } else {
-      const keys = await this.redis.keys('search:*');
-      if (keys.length > 0) {
-        await this.redis.del(...keys);
-        this.logger.log(`Cleared all ${keys.length} search cache entries`);
-      }
+      const size = this.cache.size;
+      this.cache.clear();
+      this.logger.log(`Cleared all ${size} search cache entries`);
     }
   }
 
@@ -230,13 +217,9 @@ export class OptimizedSearchService {
     totalKeys: number;
     totalMemory: string;
   }> {
-    const keys = await this.redis.keys('search:*');
-    const info = await this.redis.info('memory');
-    const memoryMatch = info.match(/used_memory_human:(\S+)/);
-
     return {
-      totalKeys: keys.length,
-      totalMemory: memoryMatch ? memoryMatch[1] : 'unknown',
+      totalKeys: this.cache.size,
+      totalMemory: 'in-memory',
     };
   }
 }
