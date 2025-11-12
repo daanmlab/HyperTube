@@ -1,9 +1,9 @@
 import { apiClient } from '@/api/client';
 import { Comments } from '@/components/Comments';
+import { MP4VideoPlayer } from '@/components/MP4VideoPlayer';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { VideoPlayer } from '@/components/VideoPlayer';
 import { ArrowLeft, Calendar, Clock, Star } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useState } from 'react';
@@ -84,8 +84,8 @@ export const MovieDetailsPage: React.FC = () => {
   const genres = Array.isArray(movie.genres)
     ? movie.genres
     : typeof movie.genres === 'string'
-      ? movie.genres.split(',').map((g: string) => g.trim())
-      : [];
+    ? movie.genres.split(',').map((g: string) => g.trim())
+    : [];
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-6">
@@ -103,8 +103,9 @@ export const MovieDetailsPage: React.FC = () => {
               src={movie.imageUrl}
               alt={movie.title}
               className="w-48 h-72 object-cover rounded-lg"
-              onError={(e) => {
-                e.currentTarget.src = 'https://via.placeholder.com/300x450?text=No+Image';
+              onError={e => {
+                e.currentTarget.src =
+                  'https://via.placeholder.com/300x450?text=No+Image';
               }}
             />
             <div className="flex-1 space-y-4">
@@ -143,7 +144,9 @@ export const MovieDetailsPage: React.FC = () => {
               {movie.synopsis && (
                 <div>
                   <h3 className="font-semibold mb-2">Synopsis</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{movie.synopsis}</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {movie.synopsis}
+                  </p>
                 </div>
               )}
 
@@ -151,14 +154,18 @@ export const MovieDetailsPage: React.FC = () => {
               <div>
                 <Badge
                   variant={
-                    movie.status === 'ready' ? 'default' : movie.canStream ? 'default' : 'secondary'
+                    movie.status === 'ready'
+                      ? 'default'
+                      : movie.canStream
+                      ? 'default'
+                      : 'secondary'
                   }
                 >
                   {movie.status === 'ready'
                     ? 'Ready'
                     : movie.canStream
-                      ? 'Streaming Available'
-                      : movie.status}
+                    ? 'Streaming Available'
+                    : movie.status}
                 </Badge>
               </div>
             </div>
@@ -168,7 +175,11 @@ export const MovieDetailsPage: React.FC = () => {
 
       {/* Video Player - Show when ready OR when canStream is true (progressive streaming) */}
       {(movie.status === 'ready' || movie.canStream) && (
-        <VideoPlayer videoId={movie.imdbId} title={movie.title} isMovie={true} />
+        <MP4VideoPlayer
+          videoId={movie.imdbId}
+          title={movie.title}
+          isMovie={true}
+        />
       )}
 
       {/* Error Message - Show when status is error */}
