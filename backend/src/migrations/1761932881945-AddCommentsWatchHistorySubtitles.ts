@@ -4,8 +4,8 @@ export class AddCommentsWatchHistorySubtitles1761932881945 implements MigrationI
   name = 'AddCommentsWatchHistorySubtitles1761932881945';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`DROP INDEX "public"."IDX_4888bedf1b2027a53c32863124"`);
-    await queryRunner.query(`DROP INDEX "public"."IDX_3f13ae7758853c8e398278ee14"`);
+    await queryRunner.query(`DROP INDEX IF EXISTS "public"."IDX_4888bedf1b2027a53c32863124"`);
+    await queryRunner.query(`DROP INDEX IF EXISTS "public"."IDX_3f13ae7758853c8e398278ee14"`);
     await queryRunner.query(
       `CREATE TABLE "comments" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "content" text NOT NULL, "userId" uuid NOT NULL, "imdbId" character varying NOT NULL, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_8bf68bc960f2b69e818bdb90dcb" PRIMARY KEY ("id"))`,
     );
@@ -36,28 +36,41 @@ export class AddCommentsWatchHistorySubtitles1761932881945 implements MigrationI
     await queryRunner.query(
       `CREATE UNIQUE INDEX "IDX_74f170af675c59b0ea5c5188be" ON "subtitles" ("imdbId", "language") `,
     );
-    await queryRunner.query(
-      `ALTER TYPE "public"."movies_status_enum" RENAME TO "movies_status_enum_old"`,
-    );
-    await queryRunner.query(
-      `CREATE TYPE "public"."movies_status_enum" AS ENUM('requested', 'downloading', 'download_complete', 'transcoding', 'ready', 'error')`,
-    );
-    await queryRunner.query(`ALTER TABLE "movies" ALTER COLUMN "status" DROP DEFAULT`);
-    await queryRunner.query(
-      `ALTER TABLE "movies" ALTER COLUMN "status" TYPE "public"."movies_status_enum" USING "status"::"text"::"public"."movies_status_enum"`,
-    );
-    await queryRunner.query(`ALTER TABLE "movies" ALTER COLUMN "status" SET DEFAULT 'requested'`);
-    await queryRunner.query(`DROP TYPE "public"."movies_status_enum_old"`);
-    await queryRunner.query(
-      `ALTER TYPE "public"."movies_selectedquality_enum" RENAME TO "movies_selectedquality_enum_old"`,
-    );
-    await queryRunner.query(
-      `CREATE TYPE "public"."movies_selectedquality_enum" AS ENUM('720p', '1080p', '2160p', '3D')`,
-    );
-    await queryRunner.query(
-      `ALTER TABLE "movies" ALTER COLUMN "selectedQuality" TYPE "public"."movies_selectedquality_enum" USING "selectedQuality"::"text"::"public"."movies_selectedquality_enum"`,
-    );
-    await queryRunner.query(`DROP TYPE "public"."movies_selectedquality_enum_old"`);
+    
+    const moviesTableExists = await queryRunner.hasTable('movies');
+    
+    if (moviesTableExists) {
+      await queryRunner.query(
+        `ALTER TYPE "public"."movies_status_enum" RENAME TO "movies_status_enum_old"`,
+      );
+      await queryRunner.query(
+        `CREATE TYPE "public"."movies_status_enum" AS ENUM('requested', 'downloading', 'download_complete', 'transcoding', 'ready', 'error')`,
+      );
+      await queryRunner.query(`ALTER TABLE "movies" ALTER COLUMN "status" DROP DEFAULT`);
+      await queryRunner.query(
+        `ALTER TABLE "movies" ALTER COLUMN "status" TYPE "public"."movies_status_enum" USING "status"::"text"::"public"."movies_status_enum"`,
+      );
+      await queryRunner.query(`ALTER TABLE "movies" ALTER COLUMN "status" SET DEFAULT 'requested'`);
+      await queryRunner.query(`DROP TYPE "public"."movies_status_enum_old"`);
+      
+      await queryRunner.query(
+        `ALTER TYPE "public"."movies_selectedquality_enum" RENAME TO "movies_selectedquality_enum_old"`,
+      );
+      await queryRunner.query(
+        `CREATE TYPE "public"."movies_selectedquality_enum" AS ENUM('720p', '1080p', '2160p', '3D')`,
+      );
+      await queryRunner.query(
+        `ALTER TABLE "movies" ALTER COLUMN "selectedQuality" TYPE "public"."movies_selectedquality_enum" USING "selectedQuality"::"text"::"public"."movies_selectedquality_enum"`,
+      );
+      await queryRunner.query(`DROP TYPE "public"."movies_selectedquality_enum_old"`);
+    } else {
+      await queryRunner.query(
+        `CREATE TYPE IF NOT EXISTS "public"."movies_status_enum" AS ENUM('requested', 'downloading', 'download_complete', 'transcoding', 'ready', 'error')`,
+      );
+      await queryRunner.query(
+        `CREATE TYPE IF NOT EXISTS "public"."movies_selectedquality_enum" AS ENUM('720p', '1080p', '2160p', '3D')`,
+      );
+    }
     await queryRunner.query(
       `ALTER TABLE "comments" ADD CONSTRAINT "FK_7e8d7c49f218ebb14314fdb3749" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
     );
@@ -91,28 +104,40 @@ export class AddCommentsWatchHistorySubtitles1761932881945 implements MigrationI
     await queryRunner.query(
       `ALTER TABLE "comments" DROP CONSTRAINT "FK_7e8d7c49f218ebb14314fdb3749"`,
     );
-    await queryRunner.query(
-      `CREATE TYPE "public"."movies_selectedquality_enum_old" AS ENUM('480p', '720p', '1080p', '2160p')`,
-    );
-    await queryRunner.query(
-      `ALTER TABLE "movies" ALTER COLUMN "selectedQuality" TYPE "public"."movies_selectedquality_enum_old" USING "selectedQuality"::"text"::"public"."movies_selectedquality_enum_old"`,
-    );
-    await queryRunner.query(`DROP TYPE "public"."movies_selectedquality_enum"`);
-    await queryRunner.query(
-      `ALTER TYPE "public"."movies_selectedquality_enum_old" RENAME TO "movies_selectedquality_enum"`,
-    );
-    await queryRunner.query(
-      `CREATE TYPE "public"."movies_status_enum_old" AS ENUM('requested', 'downloading', 'transcoding', 'ready', 'error')`,
-    );
-    await queryRunner.query(`ALTER TABLE "movies" ALTER COLUMN "status" DROP DEFAULT`);
-    await queryRunner.query(
-      `ALTER TABLE "movies" ALTER COLUMN "status" TYPE "public"."movies_status_enum_old" USING "status"::"text"::"public"."movies_status_enum_old"`,
-    );
-    await queryRunner.query(`ALTER TABLE "movies" ALTER COLUMN "status" SET DEFAULT 'requested'`);
-    await queryRunner.query(`DROP TYPE "public"."movies_status_enum"`);
-    await queryRunner.query(
-      `ALTER TYPE "public"."movies_status_enum_old" RENAME TO "movies_status_enum"`,
-    );
+    
+    // Check if movies table exists
+    const moviesTableExists = await queryRunner.hasTable('movies');
+    
+    if (moviesTableExists) {
+      // Revert enum changes
+      await queryRunner.query(
+        `CREATE TYPE "public"."movies_selectedquality_enum_old" AS ENUM('480p', '720p', '1080p', '2160p')`,
+      );
+      await queryRunner.query(
+        `ALTER TABLE "movies" ALTER COLUMN "selectedQuality" TYPE "public"."movies_selectedquality_enum_old" USING "selectedQuality"::"text"::"public"."movies_selectedquality_enum_old"`,
+      );
+      await queryRunner.query(`DROP TYPE "public"."movies_selectedquality_enum"`);
+      await queryRunner.query(
+        `ALTER TYPE "public"."movies_selectedquality_enum_old" RENAME TO "movies_selectedquality_enum"`,
+      );
+      
+      await queryRunner.query(
+        `CREATE TYPE "public"."movies_status_enum_old" AS ENUM('requested', 'downloading', 'transcoding', 'ready', 'error')`,
+      );
+      await queryRunner.query(`ALTER TABLE "movies" ALTER COLUMN "status" DROP DEFAULT`);
+      await queryRunner.query(
+        `ALTER TABLE "movies" ALTER COLUMN "status" TYPE "public"."movies_status_enum_old" USING "status"::"text"::"public"."movies_status_enum_old"`,
+      );
+      await queryRunner.query(`ALTER TABLE "movies" ALTER COLUMN "status" SET DEFAULT 'requested'`);
+      await queryRunner.query(`DROP TYPE "public"."movies_status_enum"`);
+      await queryRunner.query(
+        `ALTER TYPE "public"."movies_status_enum_old" RENAME TO "movies_status_enum"`,
+      );
+    } else {
+      // Just drop the enums if movies table doesn't exist
+      await queryRunner.query(`DROP TYPE IF EXISTS "public"."movies_selectedquality_enum"`);
+      await queryRunner.query(`DROP TYPE IF EXISTS "public"."movies_status_enum"`);
+    }
     await queryRunner.query(`DROP INDEX "public"."IDX_74f170af675c59b0ea5c5188be"`);
     await queryRunner.query(`DROP INDEX "public"."IDX_aee32dd5178d33bb7f6d8e29b3"`);
     await queryRunner.query(`DROP TABLE "subtitles"`);
