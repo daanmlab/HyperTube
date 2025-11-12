@@ -9,12 +9,17 @@ import {
   Param,
   Post,
   Query,
-  Req,
   Res,
   UseGuards,
 } from '@nestjs/common';
-import { ApiExtraModels, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
-import type { Request, Response } from 'express';
+import {
+  ApiExtraModels,
+  ApiOperation,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
+import type { Response } from 'express';
 import * as fs from 'fs';
 import { Public } from '../auth/decorators/public.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -41,7 +46,7 @@ import { YtsService } from './yts/yts.service';
   StartDownloadResponseDto,
   MessageResponseDto,
   SearchResponseDto,
-  DeleteResponseDto,
+  DeleteResponseDto
 )
 export class MoviesController {
   constructor(
@@ -49,7 +54,7 @@ export class MoviesController {
     private readonly ariaService: AriaService,
     private readonly moviesService: MoviesService,
     private readonly tpbService: TpbService,
-    private readonly optimizedSearchService: OptimizedSearchService,
+    private readonly optimizedSearchService: OptimizedSearchService
   ) {}
 
   /**
@@ -94,7 +99,7 @@ export class MoviesController {
   @ApiQuery({ name: 'page', description: 'Page number', required: false })
   async search(
     @Query('keywords') keywords: string,
-    @Query('page') page: string = '1',
+    @Query('page') page: string = '1'
   ): Promise<SearchResponseDto> {
     const pageNumber = parseInt(page, 10) || 1;
     let data = await this.ytsService.search(keywords, pageNumber);
@@ -109,7 +114,9 @@ export class MoviesController {
   }
 
   @Get('search/optimized')
-  @ApiOperation({ summary: 'Optimized search with caching and parallel queries' })
+  @ApiOperation({
+    summary: 'Optimized search with caching and parallel queries',
+  })
   @ApiResponse({
     status: 200,
     description: 'Movies found with stats',
@@ -118,7 +125,7 @@ export class MoviesController {
   @ApiQuery({ name: 'page', description: 'Page number', required: false })
   async optimizedSearch(
     @Query('keywords') keywords: string,
-    @Query('page') page: string = '1',
+    @Query('page') page: string = '1'
   ): Promise<any> {
     const pageNumber = parseInt(page, 10) || 1;
     return this.optimizedSearchService.search(keywords, pageNumber);
@@ -126,10 +133,20 @@ export class MoviesController {
 
   @Delete('search/cache')
   @ApiOperation({ summary: 'Clear search cache' })
-  @ApiQuery({ name: 'keywords', description: 'Clear specific keyword cache', required: false })
-  async clearSearchCache(@Query('keywords') keywords?: string): Promise<{ message: string }> {
+  @ApiQuery({
+    name: 'keywords',
+    description: 'Clear specific keyword cache',
+    required: false,
+  })
+  async clearSearchCache(
+    @Query('keywords') keywords?: string
+  ): Promise<{ message: string }> {
     await this.optimizedSearchService.clearCache(keywords);
-    return { message: keywords ? `Cache cleared for "${keywords}"` : 'All search cache cleared' };
+    return {
+      message: keywords
+        ? `Cache cleared for "${keywords}"`
+        : 'All search cache cleared',
+    };
   }
 
   @Get('search/cache/stats')
@@ -178,7 +195,10 @@ export class MoviesController {
   })
   @ApiQuery({ name: 'title', description: 'Movie title' })
   @ApiQuery({ name: 'year', description: 'Release year', required: false })
-  async getBestTorrent(@Query('title') title: string, @Query('year') year?: string) {
+  async getBestTorrent(
+    @Query('title') title: string,
+    @Query('year') year?: string
+  ) {
     if (!title) {
       throw new HttpException('title is required', HttpStatus.BAD_REQUEST);
     }
@@ -208,7 +228,7 @@ export class MoviesController {
   })
   async startDownload(
     @Query('imdbId') imdbId: string,
-    @Query('quality') quality?: string,
+    @Query('quality') quality?: string
   ): Promise<StartDownloadResponseDto> {
     if (!imdbId) {
       throw new HttpException('imdbId is required', HttpStatus.BAD_REQUEST);
@@ -220,7 +240,10 @@ export class MoviesController {
     }
 
     if (!movie.torrents || movie.torrents.length === 0) {
-      throw new HttpException('No torrents available for this movie', HttpStatus.NOT_FOUND);
+      throw new HttpException(
+        'No torrents available for this movie',
+        HttpStatus.NOT_FOUND
+      );
     }
 
     // Allow quality selection via query param, fallback to best (largest size)
@@ -232,21 +255,29 @@ export class MoviesController {
       // Pick largest torrent if possible
       selectedTorrent = movie.torrents.reduce(
         (a: any, b: any) => (a.size > b.size ? a : b),
-        movie.torrents[0],
+        movie.torrents[0]
       );
     }
 
     if (!selectedTorrent.magnet) {
-      throw new HttpException('No magnet link found for selected torrent', HttpStatus.NOT_FOUND);
+      throw new HttpException(
+        'No magnet link found for selected torrent',
+        HttpStatus.NOT_FOUND
+      );
     }
 
     // Log download attempt
     console.log(
-      `Starting download for imdbId=${imdbId}, quality=${quality || selectedTorrent.resolution}`,
+      `Starting download for imdbId=${imdbId}, quality=${
+        quality || selectedTorrent.resolution
+      }`
     );
 
     try {
-      const ariaResult = await this.ariaService.addUri([selectedTorrent.magnet], {});
+      const ariaResult = await this.ariaService.addUri(
+        [selectedTorrent.magnet],
+        {}
+      );
 
       // Create or update movie record in database
       const movieRecord = await this.moviesService.createMovie({
@@ -282,7 +313,10 @@ export class MoviesController {
       };
     } catch (error) {
       console.error('Failed to start download:', error);
-      throw new HttpException('Failed to start download', HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Failed to start download',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
     }
   }
 
@@ -299,135 +333,19 @@ export class MoviesController {
   async getLibrary(): Promise<MovieDto[]> {
     const movies = await this.moviesService.getAllMovies();
     const fs = require('fs');
-    const path = require('path');
-    const { execSync } = require('child_process');
 
-    return movies.map((movie) => {
+    return movies.map(movie => {
       let transcodeProgress = movie.transcodeProgress?.toString() || '0';
-      let currentQuality = '';
-      let currentQualityProgress = 0;
-      let canStream = false; // Flag to indicate if enough segments are available for streaming
+      let canStream = false;
 
-      // Calculate accurate progress for transcoding movies
-      if (movie.status === 'transcoding') {
-        try {
-          const hlsDir = path.join('/app/videos', `${movie.imdbId}_hls`);
-
-          if (fs.existsSync(hlsDir)) {
-            const qualities = ['480p', '720p'];
-            let totalProgress = 0;
-            const minSegmentsForStreaming = 30; // ~5 minutes at 10s/segment (adjustable)
-
-            // Try to read metadata to get actual duration
-            const metadataPath = path.join(hlsDir, 'metadata.json');
-            let videoDuration = 11558; // Default ~3hr video duration in seconds
-            const segmentTime = 10; // Updated to 10 seconds to match worker settings
-
-            if (fs.existsSync(metadataPath)) {
-              try {
-                const metadataContent = fs.readFileSync(metadataPath, 'utf8');
-                const metadata = JSON.parse(metadataContent);
-                if (metadata.duration) {
-                  videoDuration = metadata.duration;
-                }
-              } catch (err) {
-                console.log(`[PROGRESS] Could not read metadata, using defaults`);
-              }
-            }
-
-            const expectedSegments = Math.ceil(videoDuration / segmentTime);
-            console.log(
-              `[PROGRESS] ${movie.imdbId} - Expected segments: ${expectedSegments} (duration: ${videoDuration}s, segment: ${segmentTime}s)`,
-            );
-
-            for (let i = 0; i < qualities.length; i++) {
-              const quality = qualities[i];
-              const pattern = path.join(hlsDir, `output_${quality}_*.ts`);
-              const playlistPath = path.join(hlsDir, `output_${quality}.m3u8`);
-
-              try {
-                const result = execSync(`ls -1 ${pattern} 2>/dev/null | wc -l`);
-                const segmentCount = result.toString().trim();
-                const currentSegments = parseInt(segmentCount) || 0;
-
-                // Check if this quality is actually complete by checking for EXT-X-ENDLIST in playlist
-                let isQualityComplete = false;
-                if (fs.existsSync(playlistPath)) {
-                  try {
-                    const playlistContent = fs.readFileSync(playlistPath, 'utf8');
-                    isQualityComplete = playlistContent.includes('#EXT-X-ENDLIST');
-                  } catch {}
-                }
-
-                console.log(
-                  `[PROGRESS] ${movie.imdbId} - ${quality}: ${currentSegments} segments${
-                    isQualityComplete ? ' (COMPLETE)' : ''
-                  }`,
-                );
-
-                // Check if we have enough segments for streaming (at least one quality)
-                if (currentSegments >= minSegmentsForStreaming && !canStream) {
-                  canStream = true;
-                  console.log(
-                    `[STREAMING] ${movie.imdbId} - ${quality} has ${currentSegments} segments, streaming enabled!`,
-                  );
-                }
-
-                if (currentSegments > 0) {
-                  const qualityWeight = 50;
-                  let qualityProgress = Math.min(100, (currentSegments / expectedSegments) * 100);
-
-                  // If quality is complete, set progress to 100%
-                  if (isQualityComplete) {
-                    qualityProgress = 100;
-                  }
-
-                  const weightedProgress = (qualityProgress * qualityWeight) / 100;
-
-                  console.log(
-                    `[PROGRESS] ${
-                      movie.imdbId
-                    } - ${quality}: ${currentSegments}/${expectedSegments} = ${qualityProgress.toFixed(
-                      1,
-                    )}% -> weighted: ${weightedProgress.toFixed(1)}%`,
-                  );
-
-                  totalProgress += weightedProgress;
-
-                  // Track the current quality being transcoded
-                  // Don't break if quality is complete - continue to next quality
-                  if (!isQualityComplete && currentSegments > 0) {
-                    currentQuality = quality;
-                    currentQualityProgress = Math.round(qualityProgress);
-                    // Don't break - we want to check all qualities
-                  } else if (isQualityComplete) {
-                    // Quality is complete, continue to next quality
-                    if (i === qualities.length - 1) {
-                      // Last quality completed
-                      currentQuality = quality;
-                      currentQualityProgress = 100;
-                    }
-                  }
-                }
-              } catch (err) {
-                const error = err as Error;
-                console.error(`[PROGRESS] Error counting segments for ${quality}:`, error.message);
-              }
-            }
-
-            if (totalProgress > 0) {
-              transcodeProgress = Math.round(totalProgress).toString();
-              console.log(
-                `[PROGRESS] ${movie.imdbId} - Final progress: ${transcodeProgress}% (${currentQuality} at ${currentQualityProgress}%)`,
-              );
-            }
-          } else {
-            console.log(`[PROGRESS] HLS dir not found: ${hlsDir}`);
-          }
-        } catch (error) {
-          const err = error as Error;
-          console.error(`[PROGRESS] Error calculating progress for ${movie.imdbId}:`, err.message);
-          // Fall back to database value
+      if (movie.transcodedPath && fs.existsSync(movie.transcodedPath)) {
+        const stats = fs.statSync(movie.transcodedPath);
+        if (stats.size > 1024 * 1024) {
+          canStream = true;
+        }
+        
+        if (movie.isFullyTranscoded) {
+          transcodeProgress = '100';
         }
       }
 
@@ -442,7 +360,7 @@ export class MoviesController {
         rating: movie.rating?.toString(),
         trailerUrl: movie.trailerUrl,
         status: movie.status as any,
-        canStream: canStream, // NEW: Indicates if streaming is available
+        canStream,
         ariaGid: movie.ariaGid,
         magnetUrl: movie.magnetUrl,
         selectedQuality: movie.selectedQuality,
@@ -452,9 +370,6 @@ export class MoviesController {
         downloadPath: movie.downloadPath,
         videoPath: movie.videoPath,
         transcodeProgress: transcodeProgress,
-        currentQuality: currentQuality || undefined,
-        currentQualityProgress:
-          currentQualityProgress > 0 ? currentQualityProgress.toString() : undefined,
         availableQualities: this.safeJsonParse(movie.availableQualities),
         metadata: movie.metadata,
         errorMessage: movie.errorMessage,
@@ -539,7 +454,9 @@ export class MoviesController {
 
             try {
               const { execSync } = require('child_process');
-              const segmentCount = execSync(`ls -1 ${pattern} 2>/dev/null | wc -l`)
+              const segmentCount = execSync(
+                `ls -1 ${pattern} 2>/dev/null | wc -l`
+              )
                 .toString()
                 .trim();
               const currentSegments = parseInt(segmentCount) || 0;
@@ -551,8 +468,12 @@ export class MoviesController {
 
                 // Calculate progress for this quality (each quality gets 50% of total)
                 const qualityWeight = 50; // Each quality is 50% of total progress
-                const qualityProgress = Math.min(100, (currentSegments / expectedSegments) * 100);
-                const weightedProgress = (qualityProgress * qualityWeight) / 100;
+                const qualityProgress = Math.min(
+                  100,
+                  (currentSegments / expectedSegments) * 100
+                );
+                const weightedProgress =
+                  (qualityProgress * qualityWeight) / 100;
 
                 totalProgress += weightedProgress;
                 currentQuality = quality;
@@ -585,7 +506,9 @@ export class MoviesController {
       status: movie.status,
       transcodeProgress: movie.transcodeProgress?.toString() || '0',
       message:
-        movie.status === 'transcoding' ? `Transcoding ${movie.selectedQuality}` : movie.status,
+        movie.status === 'transcoding'
+          ? `Transcoding ${movie.selectedQuality}`
+          : movie.status,
     };
   }
 
@@ -601,7 +524,7 @@ export class MoviesController {
     @Query('downloadedSize') downloadedSize?: string,
     @Query('totalSize') totalSize?: string,
     @Query('downloadPath') downloadPath?: string,
-    @Query('status') status?: string,
+    @Query('status') status?: string
   ): Promise<MessageResponseDto> {
     if (!imdbId) {
       throw new HttpException('imdbId is required', HttpStatus.BAD_REQUEST);
@@ -616,7 +539,7 @@ export class MoviesController {
       await this.moviesService.updateDownloadProgress(
         imdbId,
         parseInt(downloadedSize),
-        totalSize ? parseInt(totalSize) : undefined,
+        totalSize ? parseInt(totalSize) : undefined
       );
     }
 
@@ -640,10 +563,13 @@ export class MoviesController {
   })
   async updateVideoPath(
     @Query('imdbId') imdbId: string,
-    @Query('videoPath') videoPath: string,
+    @Query('videoPath') videoPath: string
   ): Promise<MessageResponseDto> {
     if (!imdbId || !videoPath) {
-      throw new HttpException('imdbId and videoPath are required', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'imdbId and videoPath are required',
+        HttpStatus.BAD_REQUEST
+      );
     }
 
     await this.moviesService.updateVideoPath(imdbId, videoPath);
@@ -659,13 +585,19 @@ export class MoviesController {
   })
   async updateTranscodeProgress(
     @Query('imdbId') imdbId: string,
-    @Query('progress') progress: string,
+    @Query('progress') progress: string
   ): Promise<MessageResponseDto> {
     if (!imdbId || !progress) {
-      throw new HttpException('imdbId and progress are required', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'imdbId and progress are required',
+        HttpStatus.BAD_REQUEST
+      );
     }
 
-    await this.moviesService.updateTranscodeProgress(imdbId, parseFloat(progress));
+    await this.moviesService.updateTranscodeProgress(
+      imdbId,
+      parseFloat(progress)
+    );
     return { message: 'Transcode progress updated successfully' };
   }
 
@@ -676,7 +608,9 @@ export class MoviesController {
     description: 'Movie deleted',
     type: DeleteResponseDto,
   })
-  async deleteMovie(@Param('imdbId') imdbId: string): Promise<DeleteResponseDto> {
+  async deleteMovie(
+    @Param('imdbId') imdbId: string
+  ): Promise<DeleteResponseDto> {
     if (!imdbId) {
       throw new HttpException('imdbId is required', HttpStatus.BAD_REQUEST);
     }
@@ -717,7 +651,9 @@ export class MoviesController {
           await this.ariaService.removeDownload(movie.ariaGid);
           console.log(`Stopped aria2 download for ${movie.imdbId}`);
         } catch (error) {
-          console.log(`Could not stop aria2 download: ${(error as any).message}`);
+          console.log(
+            `Could not stop aria2 download: ${(error as any).message}`
+          );
         }
       }
     }
@@ -732,11 +668,14 @@ export class MoviesController {
   @ApiOperation({ summary: 'Stream movie as MP4 with Range support' })
   @ApiResponse({ status: 200, description: 'MP4 video stream' })
   @ApiResponse({ status: 404, description: 'Movie not found' })
-  @ApiResponse({ status: 409, description: 'Movie still downloading or transcoding' })
+  @ApiResponse({
+    status: 409,
+    description: 'Movie still downloading or transcoding',
+  })
   async streamMovie(
     @Param('imdbId') imdbId: string,
     @Headers('range') range: string,
-    @Res() res: Response,
+    @Res() res: Response
   ) {
     const movie = await this.moviesService.findByImdbId(imdbId);
 
@@ -747,47 +686,34 @@ export class MoviesController {
     // Update lastWatchedAt
     await this.moviesService.updateLastWatched(imdbId);
 
-    // Check if MP4 cache exists
-    if (movie.transcodedPath && fs.existsSync(movie.transcodedPath)) {
-      return this.serveCachedMP4(movie.transcodedPath, range, res);
-    }
-
-    // Check if download is complete
+    // Check if download is still in progress
     if (movie.status === MovieStatus.DOWNLOADING) {
       throw new HttpException(
         'Movie is still downloading. Please wait.',
-        HttpStatus.CONFLICT,
+        HttpStatus.CONFLICT
       );
     }
 
-    // Check if currently transcoding
-    if (movie.status === MovieStatus.TRANSCODING) {
-      throw new HttpException(
-        `Movie is being transcoded. Progress: ${movie.transcodeProgress}%`,
-        HttpStatus.CONFLICT,
-      );
-    }
-
-    // Check if video file exists
     const videoPath = movie.downloadPath || movie.videoPath;
     if (!videoPath || !fs.existsSync(videoPath)) {
       throw new HttpException('Video file not found', HttpStatus.NOT_FOUND);
     }
 
-    // Trigger on-demand transcoding
-    await this.moviesService.triggerTranscoding(imdbId, videoPath);
+    if (movie.transcodedPath && fs.existsSync(movie.transcodedPath)) {
+      return this.serveCachedMP4(movie.transcodedPath, range, res);
+    }
 
-    // Return status that transcoding has started
+    if (movie.status !== MovieStatus.TRANSCODING && movie.status !== MovieStatus.READY) {
+      await this.moviesService.triggerTranscoding(imdbId, videoPath);
+    }
+
     return res.status(HttpStatus.ACCEPTED).json({
-      message: 'Transcoding started. Please check back in a few moments.',
+      message: 'Transcoding in progress. MP4 file will be available shortly.',
       status: 'transcoding',
-      progress: 0,
+      progress: movie.transcodeProgress || 0,
     });
   }
 
-  /**
-   * Helper method to serve cached MP4 files with Range support
-   */
   private serveCachedMP4(filePath: string, range: string, res: Response): void {
     const stat = fs.statSync(filePath);
     const fileSize = stat.size;
@@ -834,12 +760,12 @@ export class MoviesController {
       imdbId: string;
       transcodedPath: string;
       isFullyTranscoded: boolean;
-    },
+    }
   ): Promise<MessageResponseDto> {
     await this.moviesService.updateCache(
       body.imdbId,
       body.transcodedPath,
-      body.isFullyTranscoded,
+      body.isFullyTranscoded
     );
 
     return { message: 'Cache updated successfully' };
@@ -848,7 +774,10 @@ export class MoviesController {
   // HLS Streaming endpoints for movies
   @Get(':imdbId/master.m3u8')
   @Public()
-  async getMovieMasterPlaylist(@Param('imdbId') imdbId: string, @Res() res: Response) {
+  async getMovieMasterPlaylist(
+    @Param('imdbId') imdbId: string,
+    @Res() res: Response
+  ) {
     return this.moviesService.getMasterPlaylist(imdbId, res);
   }
 
@@ -858,7 +787,7 @@ export class MoviesController {
   async getMovieOutputPlaylist(
     @Param('imdbId') imdbId: string,
     @Param('quality') quality: string,
-    @Res() res: Response,
+    @Res() res: Response
   ) {
     return this.moviesService.getOutputPlaylist(imdbId, quality, res);
   }
@@ -869,7 +798,7 @@ export class MoviesController {
   async getMovieOutputSegment(
     @Param('imdbId') imdbId: string,
     @Param('filename') filename: string,
-    @Res() res: Response,
+    @Res() res: Response
   ) {
     return this.moviesService.getOutputFile(imdbId, filename, res);
   }
@@ -879,7 +808,7 @@ export class MoviesController {
   async getMovieQualityPlaylist(
     @Param('imdbId') imdbId: string,
     @Param('quality') quality: string,
-    @Res() res: Response,
+    @Res() res: Response
   ) {
     return this.moviesService.getQualityPlaylist(imdbId, quality, res);
   }
@@ -890,7 +819,7 @@ export class MoviesController {
     @Param('imdbId') imdbId: string,
     @Param('quality') quality: string,
     @Param('segment') segment: string,
-    @Res() res: Response,
+    @Res() res: Response
   ) {
     return this.moviesService.getSegment(imdbId, quality, segment, res);
   }
@@ -900,7 +829,7 @@ export class MoviesController {
   async getMovieThumbnail(
     @Param('imdbId') imdbId: string,
     @Param('thumbnailId') thumbnailId: string,
-    @Res() res: Response,
+    @Res() res: Response
   ) {
     return this.moviesService.getThumbnail(imdbId, thumbnailId, res);
   }

@@ -20,6 +20,7 @@
     "clsx": "^2.1.1",
     "hls.js": "^1.6.9",
     "lucide-react": "^0.539.0",
+    "media-chrome": "^4.15.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.62.0",

@@ -110,14 +110,14 @@ class VideoTranscoder {
           if (errorMsg.includes('moov atom not found')) {
             reject(
               new Error(
-                'Video file is corrupted: MP4 metadata (moov atom) not found. The download may be incomplete.',
-              ),
+                'Video file is corrupted: MP4 metadata (moov atom) not found. The download may be incomplete.'
+              )
             );
           } else if (errorMsg.includes('Invalid data')) {
             reject(
               new Error(
-                'Video file contains invalid data. The file may be corrupted or incomplete.',
-              ),
+                'Video file contains invalid data. The file may be corrupted or incomplete.'
+              )
             );
           } else if (errorMsg.includes('No such file')) {
             reject(new Error(`Video file not found: ${inputPath}`));
@@ -127,14 +127,18 @@ class VideoTranscoder {
           return;
         }
 
-        const videoStream = metadata.streams.find((s) => s.codec_type === 'video');
-        const audioStream = metadata.streams.find((s) => s.codec_type === 'audio');
+        const videoStream = metadata.streams.find(
+          s => s.codec_type === 'video'
+        );
+        const audioStream = metadata.streams.find(
+          s => s.codec_type === 'audio'
+        );
 
         if (!videoStream) {
           reject(
             new Error(
-              'No video stream found in file - file may be corrupted or is not a valid video',
-            ),
+              'No video stream found in file - file may be corrupted or is not a valid video'
+            )
           );
           return;
         }
@@ -179,7 +183,7 @@ class VideoTranscoder {
     metadata: VideoMetadata,
     videoId: string,
     qualityIndex: number,
-    totalQualities: number,
+    totalQualities: number
   ): Promise<boolean> {
     return new Promise((resolve, reject) => {
       console.log(`[TRANSCODER] Transcoding ${quality.name}...`);
@@ -187,7 +191,8 @@ class VideoTranscoder {
       const segmentTime = (options.segmentTime as number) || 10;
       const expectedSegments = Math.ceil(metadata.duration / segmentTime);
 
-      const shouldScale = metadata.width > quality.width || metadata.height > quality.height;
+      const shouldScale =
+        metadata.width > quality.width || metadata.height > quality.height;
 
       const useHardwareAccel = options.hardwareAccel !== false;
       let videoCodec = (options.videoCodec as string) || 'libx264';
@@ -202,13 +207,16 @@ class VideoTranscoder {
           }
         } catch {
           console.log(
-            '[TRANSCODER] Hardware acceleration not available, using optimized software encoding',
+            '[TRANSCODER] Hardware acceleration not available, using optimized software encoding'
           );
         }
       }
 
       const outputPath = path.join(outputDir, `output${quality.suffix}.m3u8`);
-      const segmentPath = path.join(outputDir, `output${quality.suffix}_%03d.ts`);
+      const segmentPath = path.join(
+        outputDir,
+        `output${quality.suffix}_%03d.ts`
+      );
 
       let command = ffmpeg(inputPath);
 
@@ -245,7 +253,9 @@ class VideoTranscoder {
       if (shouldScale && !useVAAPI) {
         command = command.size(`${quality.width}x${quality.height}`);
       } else if (shouldScale && useVAAPI) {
-        command = command.outputOptions([`-vf scale_vaapi=w=${quality.width}:h=${quality.height}`]);
+        command = command.outputOptions([
+          `-vf scale_vaapi=w=${quality.width}:h=${quality.height}`,
+        ]);
       }
 
       command = command
@@ -269,7 +279,9 @@ class VideoTranscoder {
       const progressInterval = setInterval(async () => {
         try {
           const pattern = path.join(outputDir, `output${quality.suffix}_*.ts`);
-          const { stdout } = await execAsync(`ls -1 ${pattern} 2>/dev/null | wc -l`);
+          const { stdout } = await execAsync(
+            `ls -1 ${pattern} 2>/dev/null | wc -l`
+          );
           const currentSegments = parseInt(stdout.trim()) || 0;
 
           if (currentSegments > 0 && expectedSegments > 0) {
@@ -277,7 +289,10 @@ class VideoTranscoder {
             const baseProgress = 10 + qualityIndex * qualityProgressPortion;
             const currentQualityProgress =
               (currentSegments / expectedSegments) * qualityProgressPortion;
-            const totalProgress = Math.min(80, Math.round(baseProgress + currentQualityProgress));
+            const totalProgress = Math.min(
+              80,
+              Math.round(baseProgress + currentQualityProgress)
+            );
 
             await this.updateStatus(videoId, {
               status: 'processing',
@@ -289,9 +304,11 @@ class VideoTranscoder {
         } catch {}
       }, 5000);
 
-      command.on('progress', (progress) => {
+      command.on('progress', progress => {
         if (progress.percent) {
-          console.log(`[TRANSCODER] ${quality.name}: ${Math.round(progress.percent)}%`);
+          console.log(
+            `[TRANSCODER] ${quality.name}: ${Math.round(progress.percent)}%`
+          );
         }
       });
 
@@ -301,7 +318,7 @@ class VideoTranscoder {
         resolve(true);
       });
 
-      command.on('error', (err) => {
+      command.on('error', err => {
         clearInterval(progressInterval);
         console.error(`[TRANSCODER] Error transcoding ${quality.name}:`, err);
         reject(err);
@@ -311,17 +328,24 @@ class VideoTranscoder {
     });
   }
 
-  async generateMasterPlaylist(outputDir: string, qualities: QualityLevel[]): Promise<void> {
+  async generateMasterPlaylist(
+    outputDir: string,
+    qualities: QualityLevel[]
+  ): Promise<void> {
     try {
       console.log('[TRANSCODER] Generating master playlist...');
 
       let masterPlaylist = '#EXTM3U\n#EXT-X-VERSION:3\n\n';
 
       for (const quality of qualities) {
-        const playlistPath = path.join(outputDir, `output${quality.suffix}.m3u8`);
+        const playlistPath = path.join(
+          outputDir,
+          `output${quality.suffix}.m3u8`
+        );
         if (fs.existsSync(playlistPath)) {
           const bandwidth =
-            parseInt(quality.videoBitrate) * 1000 + parseInt(quality.audioBitrate) * 1000;
+            parseInt(quality.videoBitrate) * 1000 +
+            parseInt(quality.audioBitrate) * 1000;
           masterPlaylist += `#EXT-X-STREAM-INF:BANDWIDTH=${bandwidth},RESOLUTION=${quality.width}x${quality.height}\n`;
           masterPlaylist += `output${quality.suffix}.m3u8\n\n`;
         }
@@ -344,7 +368,7 @@ class VideoTranscoder {
   async generateThumbnails(
     inputPath: string,
     outputDir: string,
-    metadata: VideoMetadata,
+    metadata: VideoMetadata
   ): Promise<void> {
     try {
       console.log('[TRANSCODER] Generating thumbnails...');
@@ -359,15 +383,21 @@ class VideoTranscoder {
 
       for (let i = 0; i < count; i++) {
         const timestamp = (duration / count) * i;
-        const outputPath = path.join(thumbnailDir, `thumb_${i.toString().padStart(3, '0')}.png`);
+        const outputPath = path.join(
+          thumbnailDir,
+          `thumb_${i.toString().padStart(3, '0')}.png`
+        );
 
         const promise = new Promise<void>((resolve, reject) => {
           ffmpeg(inputPath)
             .seekInput(timestamp)
-            .outputOptions(['-vframes 1', '-vf scale=320:180:force_original_aspect_ratio=decrease'])
+            .outputOptions([
+              '-vframes 1',
+              '-vf scale=320:180:force_original_aspect_ratio=decrease',
+            ])
             .output(outputPath)
             .on('end', () => resolve())
-            .on('error', (err) => reject(err))
+            .on('error', err => reject(err))
             .run();
         });
 
@@ -385,7 +415,9 @@ class VideoTranscoder {
     const { inputPath, outputDir, videoId, options = {} } = job;
 
     try {
-      console.log(`[TRANSCODER] Starting transcoding job for video: ${videoId}`);
+      console.log(
+        `[TRANSCODER] Starting transcoding job for video: ${videoId}`
+      );
       console.log(`[TRANSCODER] Input file: ${inputPath}`);
 
       await this.updateStatus(videoId, {
@@ -424,7 +456,9 @@ class VideoTranscoder {
 
       // Validate metadata
       if (!metadata.duration || metadata.duration <= 0) {
-        throw new Error(`Invalid video duration: ${metadata.duration}s - file may be corrupted`);
+        throw new Error(
+          `Invalid video duration: ${metadata.duration}s - file may be corrupted`
+        );
       }
       if (!metadata.width || !metadata.height) {
         throw new Error('Invalid video dimensions - file may be corrupted');
@@ -450,7 +484,7 @@ class VideoTranscoder {
 
       if (parallelTranscoding) {
         console.log(
-          `[TRANSCODER] Starting parallel transcoding (up to ${maxParallelJobs} qualities at once)`,
+          `[TRANSCODER] Starting parallel transcoding (up to ${maxParallelJobs} qualities at once)`
         );
 
         await this.updateStatus(videoId, {
@@ -479,16 +513,20 @@ class VideoTranscoder {
         }
 
         console.log(
-          `[TRANSCODER] Quality order: ${reorderedQualities.map((q) => q.name).join(' → ')}`,
+          `[TRANSCODER] Quality order: ${reorderedQualities
+            .map(q => q.name)
+            .join(' → ')}`
         );
 
         // Process qualities in batches
         for (let i = 0; i < reorderedQualities.length; i += maxParallelJobs) {
           const batch = reorderedQualities.slice(i, i + maxParallelJobs);
-          const batchPromises = batch.map((quality) => {
+          const batchPromises = batch.map(quality => {
             const qualityIndex = qualities.indexOf(quality); // Use original index for progress calc
             console.log(
-              `[TRANSCODER] Starting ${quality.name} (parallel batch ${Math.floor(i / maxParallelJobs) + 1})`,
+              `[TRANSCODER] Starting ${quality.name} (parallel batch ${
+                Math.floor(i / maxParallelJobs) + 1
+              })`
             );
             return this.transcodeQuality(
               inputPath,
@@ -498,11 +536,14 @@ class VideoTranscoder {
               metadata,
               videoId,
               qualityIndex,
-              qualities.length,
+              qualities.length
             )
-              .then((success) => ({ quality, success }))
-              .catch((err) => {
-                console.error(`[TRANSCODER] Error transcoding ${quality.name}:`, err);
+              .then(success => ({ quality, success }))
+              .catch(err => {
+                console.error(
+                  `[TRANSCODER] Error transcoding ${quality.name}:`,
+                  err
+                );
                 return { quality, success: false };
               });
           });
@@ -515,22 +556,30 @@ class VideoTranscoder {
             if (success) {
               successfulQualities.push(quality);
               console.log(
-                `[TRANSCODER] ${quality.name} completed successfully (${successfulQualities.length}/${qualities.length})`,
+                `[TRANSCODER] ${quality.name} completed successfully (${successfulQualities.length}/${qualities.length})`
               );
 
               // Update status with newly available quality
               await this.updateStatus(videoId, {
                 status: 'ready',
-                progress: Math.round(10 + (successfulQualities.length / qualities.length) * 70),
-                message: `${successfulQualities.map((q) => q.name).join(', ')} available${successfulQualities.length < qualities.length ? ' - transcoding remaining qualities...' : ''}`,
+                progress: Math.round(
+                  10 + (successfulQualities.length / qualities.length) * 70
+                ),
+                message: `${successfulQualities
+                  .map(q => q.name)
+                  .join(', ')} available${
+                  successfulQualities.length < qualities.length
+                    ? ' - transcoding remaining qualities...'
+                    : ''
+                }`,
                 metadata,
-                qualities: successfulQualities.map((q) => q.name),
+                qualities: successfulQualities.map(q => q.name),
                 availableForStreaming: true,
               });
 
               if (successfulQualities.length === 1) {
                 console.log(
-                  `[TRANSCODER] Video ${videoId} is now ready for streaming with ${quality.name}`,
+                  `[TRANSCODER] Video ${videoId} is now ready for streaming with ${quality.name}`
                 );
               }
             }
@@ -558,7 +607,7 @@ class VideoTranscoder {
             metadata,
             videoId,
             i,
-            qualities.length,
+            qualities.length
           );
           if (success) {
             successfulQualities.push(quality);
@@ -569,21 +618,23 @@ class VideoTranscoder {
                 progress: Math.round(10 + ((i + 1) / qualities.length) * 70),
                 message: `${quality.name} ready - continuing with other qualities...`,
                 metadata,
-                qualities: successfulQualities.map((q) => q.name),
+                qualities: successfulQualities.map(q => q.name),
                 availableForStreaming: true,
               });
               console.log(
-                `[TRANSCODER] Video ${videoId} is now ready for streaming with ${quality.name}`,
+                `[TRANSCODER] Video ${videoId} is now ready for streaming with ${quality.name}`
               );
             } else {
               await this.updateStatus(videoId, {
                 status: 'ready',
                 progress: Math.round(10 + ((i + 1) / qualities.length) * 70),
                 message: `${successfulQualities
-                  .map((q) => q.name)
-                  .join(', ')} available - transcoding ${quality.name} complete`,
+                  .map(q => q.name)
+                  .join(', ')} available - transcoding ${
+                  quality.name
+                } complete`,
                 metadata,
-                qualities: successfulQualities.map((q) => q.name),
+                qualities: successfulQualities.map(q => q.name),
                 availableForStreaming: true,
               });
             }
@@ -617,7 +668,7 @@ class VideoTranscoder {
         progress: 100,
         message: 'Transcoding completed successfully',
         metadata,
-        qualities: successfulQualities.map((q) => q.name),
+        qualities: successfulQualities.map(q => q.name),
         completedAt: new Date().toISOString(),
       });
 
@@ -625,7 +676,8 @@ class VideoTranscoder {
     } catch (error) {
       console.error(`[TRANSCODER] Error processing video ${videoId}:`, error);
 
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error occurred';
 
       await this.updateStatus(videoId, {
         status: 'error',
@@ -634,6 +686,155 @@ class VideoTranscoder {
         error: errorMessage,
         failedAt: new Date().toISOString(),
       });
+    }
+  }
+
+  /**
+   * Process video for MP4 streaming (simplified, faster transcoding)
+   */
+  async processVideoMP4(job: {
+    type: string;
+    inputPath: string;
+    outputPath: string;
+    finalPath: string;
+    videoId: string;
+  }): Promise<void> {
+    const { inputPath, outputPath, finalPath, videoId } = job;
+
+    try {
+      console.log(`[TRANSCODER] Starting MP4 transcoding: ${videoId}`);
+      console.log(`[TRANSCODER] Input: ${inputPath}`);
+      console.log(`[TRANSCODER] Output: ${outputPath}`);
+
+      await this.updateStatus(videoId, {
+        status: 'processing',
+        progress: 0,
+        message: 'Starting MP4 transcoding...',
+        startTime: new Date().toISOString(),
+      });
+
+      // Validate input file
+      if (!fs.existsSync(inputPath)) {
+        throw new Error(`Input file not found: ${inputPath}`);
+      }
+
+      const stats = fs.statSync(inputPath);
+      if (stats.size === 0) {
+        throw new Error(`Input file is empty: ${inputPath}`);
+      }
+
+      console.log(`[TRANSCODER] Input file validated: ${stats.size} bytes`);
+
+      // Transcode to MP4
+      await new Promise<void>((resolve, reject) => {
+        ffmpeg(inputPath)
+          .videoCodec('libx264')
+          .audioCodec('aac')
+          .addOption('-preset', 'veryfast') // Speed over quality for speed-to-market
+          .addOption('-crf', '23') // Good quality
+          .addOption('-movflags', '+faststart') // Web streaming optimization
+          .addOption('-pix_fmt', 'yuv420p') // Browser compatibility
+          .size('1280x720') // Single quality: 720p
+          .videoBitrate('2500k')
+          .audioBitrate('192k')
+          .audioChannels(2)
+          .audioFrequency(44100)
+          .format('mp4')
+          .output(outputPath)
+          .on('start', commandLine => {
+            console.log(`[TRANSCODER] FFmpeg command: ${commandLine}`);
+          })
+          .on('progress', async progress => {
+            if (progress.percent) {
+              const roundedProgress = Math.round(progress.percent);
+              console.log(`[TRANSCODER] Progress: ${roundedProgress}%`);
+
+              await this.updateStatus(videoId, {
+                status: 'processing',
+                progress: roundedProgress,
+                message: `Transcoding: ${roundedProgress}%`,
+                timemark: progress.timemark,
+              });
+            }
+          })
+          .on('end', () => {
+            console.log(`[TRANSCODER] FFmpeg transcode complete`);
+            resolve();
+          })
+          .on('error', err => {
+            console.error(`[TRANSCODER] FFmpeg error:`, err);
+            reject(err);
+          })
+          .run();
+      });
+
+      // Rename temp file to final
+      console.log(`[TRANSCODER] Renaming ${outputPath} to ${finalPath}`);
+      fs.renameSync(outputPath, finalPath);
+
+      // Update backend with cache info
+      const backendUrl = process.env.BACKEND_URL || 'http://api:3000';
+      console.log(`[TRANSCODER] Updating backend cache info`);
+
+      await axios.post(`${backendUrl}/movies/update-cache`, {
+        imdbId: videoId,
+        transcodedPath: finalPath,
+        isFullyTranscoded: true,
+      });
+
+      await this.updateStatus(videoId, {
+        status: 'complete',
+        progress: 100,
+        message: 'MP4 transcoding complete',
+        completedAt: new Date().toISOString(),
+      });
+
+      console.log(`[TRANSCODER] ✅ MP4 transcoding completed for: ${videoId}`);
+    } catch (error) {
+      console.error(
+        `[TRANSCODER] ❌ Error processing MP4 for ${videoId}:`,
+        error
+      );
+
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error occurred';
+
+      // Clean up temp file if it exists
+      if (fs.existsSync(outputPath)) {
+        try {
+          fs.unlinkSync(outputPath);
+          console.log(`[TRANSCODER] Cleaned up temp file: ${outputPath}`);
+        } catch (cleanupError) {
+          console.error(
+            `[TRANSCODER] Failed to clean up temp file:`,
+            cleanupError
+          );
+        }
+      }
+
+      await this.updateStatus(videoId, {
+        status: 'error',
+        progress: 0,
+        message: `MP4 transcoding failed: ${errorMessage}`,
+        error: errorMessage,
+        failedAt: new Date().toISOString(),
+      });
+
+      // Update backend with error
+      try {
+        const backendUrl = process.env.BACKEND_URL || 'http://api:3000';
+        await axios.post(`${backendUrl}/movies/update-progress`, null, {
+          params: {
+            imdbId: videoId,
+            status: 'error',
+          },
+        });
+      } catch (backendError) {
+        console.error(
+          `[TRANSCODER] Failed to update backend with error:`,
+          backendError
+        );
+      }
     }
   }
 }
@@ -669,10 +870,10 @@ async function restartIncompleteTranscodingJobs() {
     }
 
     const incompleteTranscodings = (movies as MovieData[]).filter(
-      (movie) =>
+      movie =>
         movie.status === 'transcoding' &&
         movie.transcodeProgress !== undefined &&
-        parseFloat(movie.transcodeProgress) < 100,
+        parseFloat(movie.transcodeProgress) < 100
     );
 
     if (incompleteTranscodings.length === 0) {
@@ -681,19 +882,25 @@ async function restartIncompleteTranscodingJobs() {
     }
 
     console.log(
-      `[WORKER] Found ${incompleteTranscodings.length} incomplete transcoding job(s), restarting...`,
+      `[WORKER] Found ${incompleteTranscodings.length} incomplete transcoding job(s), restarting...`
     );
 
     for (const movie of incompleteTranscodings) {
       try {
-        console.log(`[WORKER] Restarting transcoding for: ${movie.title} (${movie.imdbId})`);
+        console.log(
+          `[WORKER] Restarting transcoding for: ${movie.title} (${movie.imdbId})`
+        );
 
-        await axios.post(`${backendUrl}/movies/update-transcode-progress`, null, {
-          params: {
-            imdbId: movie.imdbId,
-            progress: '0',
-          },
-        });
+        await axios.post(
+          `${backendUrl}/movies/update-transcode-progress`,
+          null,
+          {
+            params: {
+              imdbId: movie.imdbId,
+              progress: '0',
+            },
+          }
+        );
 
         if (movie.videoPath && fs.existsSync(movie.videoPath)) {
           const hlsDir = path.join('/app/videos', `${movie.imdbId}_hls`);
@@ -702,13 +909,20 @@ async function restartIncompleteTranscodingJobs() {
             try {
               const files = fs.readdirSync(hlsDir);
               for (const file of files) {
-                if (file.endsWith('.ts') || file.endsWith('.m3u8') || file.endsWith('.vtt')) {
+                if (
+                  file.endsWith('.ts') ||
+                  file.endsWith('.m3u8') ||
+                  file.endsWith('.vtt')
+                ) {
                   fs.unlinkSync(path.join(hlsDir, file));
                 }
               }
               console.log(`[WORKER] Cleaned up ${files.length} old files`);
             } catch (cleanupError) {
-              console.error(`[WORKER] Error cleaning up old segments:`, cleanupError);
+              console.error(
+                `[WORKER] Error cleaning up old segments:`,
+                cleanupError
+              );
             }
           }
 
@@ -722,7 +936,7 @@ async function restartIncompleteTranscodingJobs() {
           console.log(`[WORKER] ✅ Restarted transcoding for ${movie.title}`);
         } else {
           console.log(
-            `[WORKER] ⚠️ Video file not found for ${movie.title}, setting status to error`,
+            `[WORKER] ⚠️ Video file not found for ${movie.title}, setting status to error`
           );
           await axios.post(`${backendUrl}/movies/update-progress`, null, {
             params: {
@@ -732,13 +946,19 @@ async function restartIncompleteTranscodingJobs() {
           });
         }
       } catch (error) {
-        console.error(`[WORKER] Failed to restart transcoding for ${movie.title}:`, error);
+        console.error(
+          `[WORKER] Failed to restart transcoding for ${movie.title}:`,
+          error
+        );
       }
     }
 
     console.log('[WORKER] Finished restarting incomplete transcoding jobs');
   } catch (error) {
-    console.error('[WORKER] Error checking for incomplete transcoding jobs:', error);
+    console.error(
+      '[WORKER] Error checking for incomplete transcoding jobs:',
+      error
+    );
   }
 }
 
@@ -766,7 +986,7 @@ async function main() {
           status: 'healthy',
           lastSeen: new Date().toISOString(),
           version: '2.0.0',
-        }),
+        })
       );
     } catch (error) {
       console.error('[WORKER] Health check failed:', error);
@@ -785,18 +1005,20 @@ async function main() {
 
         if (job.type === 'processVideo') {
           await transcoder.process(job);
+        } else if (job.type === 'processVideoMP4') {
+          await transcoder.processVideoMP4(job);
         } else {
           console.log('[WORKER] Unknown job type:', job.type);
         }
       }
     } catch (error) {
       console.error('[WORKER] Error in main loop:', error);
-      await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 seconds before retrying
+      await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds before retrying
     }
   }
 }
 
-main().catch((error) => {
+main().catch(error => {
   console.error('[WORKER] Fatal error:', error);
   process.exit(1);
 });

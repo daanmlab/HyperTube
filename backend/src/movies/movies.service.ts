@@ -266,37 +266,31 @@ export class MoviesService {
     return this.movieRepository.save(movie);
   }
 
-  /**
-   * Triggers on-demand MP4 transcoding for a movie
-   * Runs asynchronously in the background using child_process
-   */
   async triggerTranscoding(imdbId: string, inputPath: string): Promise<void> {
     const outputPath = path.join('/app/videos', `${imdbId}.mp4`);
-    const tempPath = path.join('/app/videos', `${imdbId}_temp.mp4`);
 
     this.logger.log(`Starting transcoding for ${imdbId}: ${inputPath} -> ${outputPath}`);
 
-    // Update status
-    await this.updateStatus(imdbId, MovieStatus.TRANSCODING);
+    const movie = await this.findByImdbId(imdbId);
+    if (movie) {
+      movie.status = MovieStatus.TRANSCODING;
+      movie.transcodedPath = outputPath;
+      movie.isFullyTranscoded = false;
+      movie.transcodeProgress = 0;
+      await this.movieRepository.save(movie);
+    }
 
-    // Run transcoding in background (non-blocking)
-    this.transcodeInBackground(imdbId, inputPath, tempPath, outputPath);
+    this.transcodeInBackground(imdbId, inputPath, outputPath);
   }
 
-  /**
-   * Transcode video using FFmpeg child process
-   * Runs asynchronously without blocking the request
-   */
   private transcodeInBackground(
     imdbId: string,
     inputPath: string,
-    tempPath: string,
-    finalPath: string,
+    outputPath: string,
   ): void {
-    // Run async after a tick to not block the response
     setImmediate(async () => {
       try {
-        await this.transcodeMovie(imdbId, inputPath, tempPath, finalPath);
+        await this.transcodeMovie(imdbId, inputPath, outputPath);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         this.logger.error(`Transcoding failed for ${imdbId}: ${errorMessage}`);
@@ -305,19 +299,14 @@ export class MoviesService {
     });
   }
 
-  /**
-   * Execute FFmpeg transcoding using child_process
-   */
   private async transcodeMovie(
     imdbId: string,
     inputPath: string,
-    tempPath: string,
-    finalPath: string,
+    outputPath: string,
   ): Promise<void> {
     const { spawn } = await import('child_process');
 
     return new Promise((resolve, reject) => {
-      // Validate input file
       if (!fs.existsSync(inputPath)) {
         reject(new Error(`Input file not found: ${inputPath}`));
         return;
@@ -331,7 +320,6 @@ export class MoviesService {
 
       this.logger.log(`Input validated: ${stats.size} bytes`);
 
-      // Spawn FFmpeg process
       const ffmpeg = spawn('ffmpeg', [
         '-i',
         inputPath,
@@ -350,34 +338,29 @@ export class MoviesService {
         '-ar',
         '44100',
         '-movflags',
-        '+faststart', // Web streaming optimization
+        '+faststart',
         '-pix_fmt',
-        'yuv420p', // Browser compatibility
+        'yuv420p',
         '-vf',
-        'scale=1280:720', // 720p
-        '-y', // Overwrite output
-        tempPath,
+        'scale=1280:720',
+        '-y',
+        outputPath,
       ]);
 
       let lastProgress = 0;
 
-      // Parse FFmpeg stderr for progress
       ffmpeg.stderr.on('data', async (data: Buffer) => {
         const output = data.toString();
-
-        // Extract time progress: time=00:01:23.45
         const timeMatch = output.match(/time=(\d{2}):(\d{2}):(\d{2})/);
+        
         if (timeMatch) {
           const hours = parseInt(timeMatch[1]);
           const minutes = parseInt(timeMatch[2]);
           const seconds = parseInt(timeMatch[3]);
           const currentSeconds = hours * 3600 + minutes * 60 + seconds;
-
-          // Estimate progress (assuming ~2 hour movie = 7200 seconds)
           const estimatedDuration = 7200;
           const progress = Math.min(95, Math.round((currentSeconds / estimatedDuration) * 100));
 
-          // Update every 5%
           if (progress >= lastProgress + 5) {
             lastProgress = progress;
             this.logger.log(`Transcoding ${imdbId}: ${progress}%`);
@@ -389,28 +372,18 @@ export class MoviesService {
       ffmpeg.on('close', async (code) => {
         if (code === 0) {
           this.logger.log(`✅ Transcoding complete for ${imdbId}`);
-
-          // Rename temp to final
           try {
-            fs.renameSync(tempPath, finalPath);
-            this.logger.log(`Renamed ${tempPath} -> ${finalPath}`);
-
-            // Update database
-            await this.updateCache(imdbId, finalPath, true);
+            await this.updateCache(imdbId, outputPath, true);
             await this.updateTranscodeProgress(imdbId, 100);
-
             resolve();
           } catch (error) {
             reject(error);
           }
         } else {
           this.logger.error(`❌ FFmpeg exited with code ${code}`);
-
-          // Cleanup temp file
-          if (fs.existsSync(tempPath)) {
-            fs.unlinkSync(tempPath);
+          if (fs.existsSync(outputPath)) {
+            fs.unlinkSync(outputPath);
           }
-
           reject(new Error(`FFmpeg exited with code ${code}`));
         }
       });
@@ -422,9 +395,6 @@ export class MoviesService {
     });
   }
 
-  /**
-   * Updates MP4 cache information after transcoding completes
-   */
   async updateCache(
     imdbId: string,
     transcodedPath: string,
@@ -445,9 +415,6 @@ export class MoviesService {
     return this.movieRepository.save(movie);
   }
 
-  /**
-   * Retrieves all movies, ordered by creation date (newest first)
-   */
   async getAllMovies(): Promise<Movie[]> {
     return this.movieRepository.find({
       order: { createdAt: 'DESC' },

@@ -1,8 +1,12 @@
 import { apiClient } from '@/api/client';
-import type { VideoStatusResponseDto } from '@/api/generated/models/video-status-response-dto';
-import { api } from '@/api/service';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import Hls from 'hls.js';
 import {
   Maximize,
@@ -18,6 +22,7 @@ import {
   VolumeX,
 } from 'lucide-react';
 import { type FC, useCallback, useEffect, useRef, useState } from 'react';
+import { api } from '../api';
 
 /**
  * Props for the VideoPlayer component
@@ -88,7 +93,11 @@ const getQualityLabel = (height: number): string => {
  * Main video player component with HLS streaming support
  * Features: adaptive bitrate, quality selection, keyboard shortcuts, watch progress tracking
  */
-export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = false }) => {
+export const VideoPlayer: FC<VideoPlayerProps> = ({
+  videoId,
+  title,
+  isMovie = false,
+}) => {
   // Refs
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -121,12 +130,18 @@ export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = fa
   const [currentQuality, setCurrentQuality] = useState<string>('auto');
 
   // Video status (for non-movie videos)
-  const [videoStatus, setVideoStatus] = useState<VideoStatusResponseDto | null>(null);
+  const [videoStatus, setVideoStatus] = useState<VideoStatusResponseDto | null>(
+    null
+  );
 
   // Construct HLS URL
   const hlsUrl = isMovie
-    ? `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/movies/${videoId}/master.m3u8`
-    : `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/videos/${videoId}/master.m3u8`;
+    ? `${
+        import.meta.env.VITE_API_URL || 'http://localhost:3000'
+      }/movies/${videoId}/master.m3u8`
+    : `${
+        import.meta.env.VITE_API_URL || 'http://localhost:3000'
+      }/videos/${videoId}/master.m3u8`;
 
   // ========================================
   // Playback Control Functions
@@ -234,7 +249,7 @@ export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = fa
           e.preventDefault();
           videoRef.current.currentTime = Math.max(
             0,
-            videoRef.current.currentTime - PLAYER_CONSTANTS.SEEK_INCREMENT,
+            videoRef.current.currentTime - PLAYER_CONSTANTS.SEEK_INCREMENT
           );
           break;
         }
@@ -242,13 +257,16 @@ export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = fa
           e.preventDefault();
           videoRef.current.currentTime = Math.min(
             duration,
-            videoRef.current.currentTime + PLAYER_CONSTANTS.SEEK_INCREMENT,
+            videoRef.current.currentTime + PLAYER_CONSTANTS.SEEK_INCREMENT
           );
           break;
         }
         case 'ArrowUp': {
           e.preventDefault();
-          const newVolUp = Math.min(1, volume + PLAYER_CONSTANTS.VOLUME_INCREMENT);
+          const newVolUp = Math.min(
+            1,
+            volume + PLAYER_CONSTANTS.VOLUME_INCREMENT
+          );
           setVolume(newVolUp);
           videoRef.current.volume = newVolUp;
           setIsMuted(false);
@@ -257,7 +275,10 @@ export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = fa
         }
         case 'ArrowDown': {
           e.preventDefault();
-          const newVolDown = Math.max(0, volume - PLAYER_CONSTANTS.VOLUME_INCREMENT);
+          const newVolDown = Math.max(
+            0,
+            volume - PLAYER_CONSTANTS.VOLUME_INCREMENT
+          );
           setVolume(newVolDown);
           videoRef.current.volume = newVolDown;
           break;
@@ -274,7 +295,7 @@ export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = fa
         }
       }
     },
-    [volume, duration, togglePlay, toggleMute, toggleFullscreen],
+    [volume, duration, togglePlay, toggleMute, toggleFullscreen]
   );
 
   useEffect(() => {
@@ -289,7 +310,8 @@ export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = fa
     };
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    return () =>
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
   useEffect(() => {
@@ -298,7 +320,9 @@ export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = fa
 
     const fetchStatus = async () => {
       try {
-        const response = await api.videos.videosControllerGetVideoStatus(videoId);
+        const response = await api.videos.videosControllerGetVideoStatus(
+          videoId
+        );
         setVideoStatus(response.data);
         if (response.data.availableQualities) {
           setAvailableQualities(response.data.availableQualities);
@@ -319,7 +343,9 @@ export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = fa
 
     const fetchMovieMetadata = async () => {
       try {
-        const response = await apiClient.get(`/movies/status?imdbId=${videoId}`);
+        const response = await apiClient.get(
+          `/movies/status?imdbId=${videoId}`
+        );
         const movieData = response.data;
 
         console.log('Movie metadata response:', movieData);
@@ -327,19 +353,31 @@ export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = fa
         // Try to get duration from metadata first (in seconds from video file)
         if (movieData.metadata?.duration) {
           setActualDuration(movieData.metadata.duration);
-          console.log('Loaded actual video duration from metadata:', movieData.metadata.duration);
+          console.log(
+            'Loaded actual video duration from metadata:',
+            movieData.metadata.duration
+          );
         }
         // Fallback to runtime from movie database (in minutes)
         else if (movieData.runtime) {
           setActualDuration(movieData.runtime * 60);
-          console.log('Loaded duration from movie runtime:', movieData.runtime * 60);
+          console.log(
+            'Loaded duration from movie runtime:',
+            movieData.runtime * 60
+          );
         }
 
         // Also get available qualities from the API as a fallback
-        if (movieData.availableQualities && Array.isArray(movieData.availableQualities)) {
-          console.log('Setting qualities from API:', movieData.availableQualities);
+        if (
+          movieData.availableQualities &&
+          Array.isArray(movieData.availableQualities)
+        ) {
+          console.log(
+            'Setting qualities from API:',
+            movieData.availableQualities
+          );
           // Only set if we don't have qualities from HLS yet
-          setAvailableQualities((prev) => {
+          setAvailableQualities(prev => {
             if (prev.length <= 1) {
               // Only 'auto' or empty
               return ['auto', ...movieData.availableQualities];
@@ -396,7 +434,7 @@ export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = fa
         console.error('Failed to save watch progress');
       }
     },
-    [isMovie, videoId],
+    [isMovie, videoId]
   );
 
   // Load saved watch progress for movies
@@ -406,7 +444,11 @@ export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = fa
     const loadWatchProgress = async () => {
       try {
         const response = await apiClient.get(`/watch-history/movie/${videoId}`);
-        if (response.data && response.data.watchedSeconds > 0 && !response.data.completed) {
+        if (
+          response.data &&
+          response.data.watchedSeconds > 0 &&
+          !response.data.completed
+        ) {
           const video = videoRef.current;
           if (video && video.duration > 0) {
             video.currentTime = response.data.watchedSeconds;
@@ -422,7 +464,8 @@ export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = fa
     const video = videoRef.current;
     if (video) {
       video.addEventListener('loadedmetadata', loadWatchProgress);
-      return () => video.removeEventListener('loadedmetadata', loadWatchProgress);
+      return () =>
+        video.removeEventListener('loadedmetadata', loadWatchProgress);
     }
   }, [isMovie, videoId]);
 
@@ -437,7 +480,7 @@ export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = fa
 
       // Clear waiting state when playback is progressing (check via state callback)
       if (!video.paused) {
-        setIsWaitingForSegments((prev) => (prev ? false : prev));
+        setIsWaitingForSegments(prev => (prev ? false : prev));
       }
 
       // Update buffered ranges
@@ -461,7 +504,8 @@ export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = fa
           console.log('10 seconds elapsed, saving progress...');
           lastSaveTimeRef.current = now;
           // Use actualDuration if available for movies, otherwise use video.duration
-          const totalDuration = isMovie && actualDuration > 0 ? actualDuration : video.duration;
+          const totalDuration =
+            isMovie && actualDuration > 0 ? actualDuration : video.duration;
           saveWatchProgress(video.currentTime, totalDuration);
         }
       }
@@ -500,18 +544,18 @@ export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = fa
           console.log('HLS levels found:', hls.levels.length);
           console.log(
             'HLS levels detail:',
-            hls.levels.map((l) => ({
+            hls.levels.map(l => ({
               height: l.height,
               width: l.width,
               bitrate: l.bitrate,
-            })),
+            }))
           );
         }
         setIsLoading(false);
 
         // Set available qualities
         if (hls && hls.levels.length > 0) {
-          const qualities = hls.levels.map((level) => {
+          const qualities = hls.levels.map(level => {
             console.log('Processing level with height:', level.height);
             return getQualityLabel(level.height);
           });
@@ -527,7 +571,9 @@ export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = fa
         if (video && hls) {
           const currentTime = video.currentTime;
           const bufferedEnd =
-            video.buffered.length > 0 ? video.buffered.end(video.buffered.length - 1) : 0;
+            video.buffered.length > 0
+              ? video.buffered.end(video.buffered.length - 1)
+              : 0;
           const bufferAhead = bufferedEnd - currentTime;
 
           // If we have less than 10 seconds of buffer and we're still transcoding
@@ -538,7 +584,9 @@ export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = fa
             bufferedEnd < actualDuration - 30
           ) {
             console.log(
-              `Low buffer detected: ${bufferAhead.toFixed(1)}s ahead. Movie still transcoding.`,
+              `Low buffer detected: ${bufferAhead.toFixed(
+                1
+              )}s ahead. Movie still transcoding.`
             );
           }
         }
@@ -558,12 +606,12 @@ export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = fa
         if (isSegmentMissing || isBufferStalled) {
           if (isBufferStalled) {
             console.warn(
-              'Buffer stalled - missing segments in transcoded content or waiting for transcoding',
+              'Buffer stalled - missing segments in transcoded content or waiting for transcoding'
             );
             setIsWaitingForSegments(true);
           } else {
             console.warn(
-              'Segment not found - reached end of transcoded content or buffering needed',
+              'Segment not found - reached end of transcoded content or buffering needed'
             );
             setIsWaitingForSegments(true);
           }
@@ -573,9 +621,18 @@ export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = fa
             const { buffered, end, nextStart } = data.bufferInfo;
 
             // Check if there's a gap and buffered content after it
-            if (buffered && buffered.length > 1 && nextStart !== undefined && nextStart > end) {
+            if (
+              buffered &&
+              buffered.length > 1 &&
+              nextStart !== undefined &&
+              nextStart > end
+            ) {
               const gap = nextStart - end;
-              console.log(`Detected ${gap.toFixed(1)}s gap in segments. Attempting to skip gap...`);
+              console.log(
+                `Detected ${gap.toFixed(
+                  1
+                )}s gap in segments. Attempting to skip gap...`
+              );
 
               // Skip to the next available buffered segment
               video.currentTime = nextStart + 0.1;
@@ -594,7 +651,9 @@ export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = fa
 
           // If we're on a specific quality (not auto), try switching to auto or another quality
           if (hls && hls.currentLevel !== -1 && hls.levels.length > 1) {
-            console.log('Attempting to switch to auto quality to find more segments');
+            console.log(
+              'Attempting to switch to auto quality to find more segments'
+            );
             const currentTime = video?.currentTime || 0;
             const wasPlaying = video && !video.paused;
 
@@ -609,7 +668,9 @@ export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = fa
                 hls.startLoad();
                 if (wasPlaying) {
                   video.play().catch(() => {
-                    console.log('Waiting for more segments to be transcoded...');
+                    console.log(
+                      'Waiting for more segments to be transcoded...'
+                    );
                     setIsLoading(true);
                   });
                 } else {
@@ -619,7 +680,9 @@ export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = fa
             }, 1000);
           } else {
             // Already on auto or only one quality available - show buffering
-            console.log('Buffering... waiting for more segments to be transcoded');
+            console.log(
+              'Buffering... waiting for more segments to be transcoded'
+            );
             setIsLoading(true);
 
             // Retry loading after a delay
@@ -712,9 +775,10 @@ export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = fa
     if (quality === 'auto') {
       hlsRef.current.currentLevel = -1;
     } else {
-      const qualityIndex = hlsRef.current.levels.findIndex((level) => {
+      const qualityIndex = hlsRef.current.levels.findIndex(level => {
         const height = level.height;
-        const targetHeight = QUALITY_RESOLUTIONS[quality as keyof typeof QUALITY_RESOLUTIONS];
+        const targetHeight =
+          QUALITY_RESOLUTIONS[quality as keyof typeof QUALITY_RESOLUTIONS];
         return height === targetHeight;
       });
 
@@ -777,7 +841,8 @@ export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = fa
   };
 
   // Use actual duration for movies if available, otherwise use HLS duration
-  const displayDuration = isMovie && actualDuration > 0 ? actualDuration : duration;
+  const displayDuration =
+    isMovie && actualDuration > 0 ? actualDuration : duration;
 
   return (
     <Card>
@@ -822,7 +887,9 @@ export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = fa
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
               <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-t-4 border-amber-500 mb-4"></div>
               <p className="text-white text-lg font-semibold mb-2">Buffering</p>
-              <p className="text-white/80 text-sm">Waiting for more segments to transcode...</p>
+              <p className="text-white/80 text-sm">
+                Waiting for more segments to transcode...
+              </p>
             </div>
           )}
 
@@ -830,7 +897,11 @@ export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = fa
           {error && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/75 text-white p-4">
               <p className="text-center mb-4">{error}</p>
-              <Button variant="outline" onClick={handleReload} className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={handleReload}
+                className="flex items-center gap-2"
+              >
                 <RotateCcw className="h-4 w-4" />
                 Retry
               </Button>
@@ -845,7 +916,7 @@ export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = fa
                 showControls ? 'opacity-100' : 'opacity-0'
               }`}
               onClick={togglePlay}
-              onKeyDown={(e) => e.key === 'Enter' && togglePlay()}
+              onKeyDown={e => e.key === 'Enter' && togglePlay()}
               aria-label={isPlaying ? 'Pause' : 'Play'}
             >
               <div className="bg-black/30 hover:bg-black/50 rounded-full p-6 cursor-pointer transition-all pointer-events-none">
@@ -878,7 +949,11 @@ export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = fa
                   type="range"
                   min="0"
                   max="100"
-                  value={displayDuration > 0 ? (currentTime / displayDuration) * 100 : 0}
+                  value={
+                    displayDuration > 0
+                      ? (currentTime / displayDuration) * 100
+                      : 0
+                  }
                   onChange={handleSeek}
                   className="relative w-full h-1 bg-transparent appearance-none cursor-pointer z-10
                     [&::-webkit-slider-track]:bg-white/20 [&::-webkit-slider-track]:rounded-full [&::-webkit-slider-track]:h-1
@@ -892,9 +967,13 @@ export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = fa
                     hover:[&::-moz-range-thumb]:scale-125"
                   style={{
                     background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${
-                      displayDuration > 0 ? (currentTime / displayDuration) * 100 : 0
+                      displayDuration > 0
+                        ? (currentTime / displayDuration) * 100
+                        : 0
                     }%, transparent ${
-                      displayDuration > 0 ? (currentTime / displayDuration) * 100 : 0
+                      displayDuration > 0
+                        ? (currentTime / displayDuration) * 100
+                        : 0
                     }%, transparent 100%)`,
                   }}
                 />
@@ -912,7 +991,11 @@ export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = fa
                   disabled={isLoading || !!error}
                   className="text-white hover:bg-white/20 h-8 w-8 p-0"
                 >
-                  {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                  {isPlaying ? (
+                    <Pause className="h-5 w-5" />
+                  ) : (
+                    <Play className="h-5 w-5" />
+                  )}
                 </Button>
 
                 {/* Volume */}
@@ -963,14 +1046,18 @@ export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = fa
 
                   {showSettings && (
                     <div className="absolute bottom-full right-0 mb-2 bg-black/95 rounded-lg p-2 min-w-[120px]">
-                      <div className="text-xs text-white/70 mb-2 px-2">Speed</div>
-                      {PLAYBACK_RATES.map((rate) => (
+                      <div className="text-xs text-white/70 mb-2 px-2">
+                        Speed
+                      </div>
+                      {PLAYBACK_RATES.map(rate => (
                         <button
                           key={rate}
                           type="button"
                           onClick={() => handlePlaybackRateChange(rate)}
                           className={`w-full text-left px-3 py-1.5 text-sm rounded hover:bg-white/20 transition-colors ${
-                            playbackRate === rate ? 'text-blue-400' : 'text-white'
+                            playbackRate === rate
+                              ? 'text-blue-400'
+                              : 'text-white'
                           }`}
                         >
                           {rate}x {playbackRate === rate && '✓'}
@@ -982,13 +1069,15 @@ export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = fa
                           <div className="text-xs text-white/70 my-2 px-2 pt-2 border-t border-white/10">
                             Quality
                           </div>
-                          {availableQualities.map((quality) => (
+                          {availableQualities.map(quality => (
                             <button
                               key={quality}
                               type="button"
                               onClick={() => handleQualityChange(quality)}
                               className={`w-full text-left px-3 py-1.5 text-sm rounded hover:bg-white/20 transition-colors ${
-                                currentQuality === quality ? 'text-blue-400' : 'text-white'
+                                currentQuality === quality
+                                  ? 'text-blue-400'
+                                  : 'text-white'
                               }`}
                             >
                               {quality} {currentQuality === quality && '✓'}
@@ -1055,12 +1144,16 @@ export const VideoPlayer: FC<VideoPlayerProps> = ({ videoId, title, isMovie = fa
                 videoStatus?.status === 'ready' &&
                 videoStatus?.progress < 100 && (
                   <p className="text-blue-600">
-                    • Additional qualities being processed ({videoStatus.progress}%)
+                    • Additional qualities being processed (
+                    {videoStatus.progress}%)
                   </p>
                 )}
-              {videoStatus?.availableQualities && videoStatus.availableQualities.length > 0 && (
-                <p>• Available: {videoStatus.availableQualities.join(', ')}</p>
-              )}
+              {videoStatus?.availableQualities &&
+                videoStatus.availableQualities.length > 0 && (
+                  <p>
+                    • Available: {videoStatus.availableQualities.join(', ')}
+                  </p>
+                )}
             </div>
             <div className="space-y-1 text-right">
               <p className="font-semibold">Keyboard Shortcuts:</p>
