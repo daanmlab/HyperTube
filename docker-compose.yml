@@ -13,6 +13,8 @@ services:
     volumes:
       - /app/node_modules
       - videos:/app/videos
+      - ./downloads:/downloads
+
     # Now handles transcoding in-process with child_process
     deploy:
       resources:
@@ -42,7 +44,6 @@ services:
       - ./frontend/vite.config.mts:/app/vite.config.mts
       - ./frontend/tsconfig.json:/app/tsconfig.json
       - /app/node_modules
-    # Limit frontend resources to leave more CPU for worker
     deploy:
       resources:
         limits:
