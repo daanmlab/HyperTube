@@ -3,11 +3,8 @@ import {
   CreateDateColumn,
   Entity,
   Index,
-  JoinColumn,
-  ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { Movie } from './movie.entity';
 
 @Entity('subtitles')
 @Index(['imdbId', 'language'], { unique: true })
@@ -15,12 +12,8 @@ export class Subtitle {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => Movie, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'imdbId', referencedColumnName: 'imdbId' })
-  @Index()
-  movie: Movie;
-
   @Column()
+  @Index()
   imdbId: string;
 
   @Column({ length: 5 })
