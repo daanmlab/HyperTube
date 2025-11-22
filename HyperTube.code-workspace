@@ -13,10 +13,6 @@
       "path": "./frontend"
     },
     {
-      "name": "🔄 Worker",
-      "path": "./worker"
-    },
-    {
       "name": "🌐 Nginx",
       "path": "./nginx"
     }
