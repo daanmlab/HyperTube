@@ -16,7 +16,6 @@ export class CommentsService {
   ) {}
 
   async create(createCommentDto: CreateCommentDto, user: User): Promise<CommentResponseDto> {
-    // Verify movie exists
     const movie = await this.moviesRepository.findOne({
       where: { imdbId: createCommentDto.imdbId },
     });
@@ -66,7 +65,6 @@ export class CommentsService {
   ): Promise<CommentResponseDto> {
     const comment = await this.findById(id);
 
-    // Verify user owns the comment
     if (comment.userId !== user.id) {
       throw new ForbiddenException('You can only edit your own comments');
     }
@@ -80,7 +78,6 @@ export class CommentsService {
   async remove(id: string, user: User): Promise<void> {
     const comment = await this.findById(id);
 
-    // Verify user owns the comment
     if (comment.userId !== user.id) {
       throw new ForbiddenException('You can only delete your own comments');
     }

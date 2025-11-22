@@ -61,7 +61,6 @@ export class User {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  // Virtual property for full name
   get fullName(): string {
     return `${this.firstName} ${this.lastName}`;
   }

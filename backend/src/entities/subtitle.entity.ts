@@ -30,7 +30,7 @@ export class Subtitle {
   languageName: string; // English, French, Spanish, etc.
 
   @Column()
-  filePath: string; // Path to .vtt file
+  filePath: string;
 
   @Column({ nullable: true })
   downloadUrl: string;

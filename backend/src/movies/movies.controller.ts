@@ -13,6 +13,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiExtraModels,
   ApiOperation,
   ApiQuery,
@@ -39,8 +40,8 @@ import { YtsService } from './yts/yts.service';
 
 @ApiTags('movies')
 @Controller('movies')
-@Public() // Temporarily enabled for testing
-// @ApiBearerAuth()
+@Public()
+@ApiBearerAuth()
 @ApiExtraModels(
   MovieDto,
   StartDownloadResponseDto,
@@ -62,15 +63,14 @@ export class MoviesController {
    */
   private safeJsonParse(value: any): any {
     if (!value) return undefined;
-    if (typeof value !== 'string') return value; // Already parsed
+    if (typeof value !== 'string') return value;
     try {
       return JSON.parse(value);
     } catch {
-      // If it's a comma-separated string, split it into an array
       if (value.includes(',')) {
         return value.split(',').map((item: string) => item.trim());
       }
-      return value; // Return as-is if not valid JSON and not comma-separated
+      return value; 
     }
   }
 
@@ -104,7 +104,6 @@ export class MoviesController {
     const pageNumber = parseInt(page, 10) || 1;
     let data = await this.ytsService.search(keywords, pageNumber);
 
-    // If YTS returns null (blocked/error), return empty array
     if (data === null) {
       console.log('YTS blocked or failed, returning empty results');
       data = [];
@@ -246,13 +245,11 @@ export class MoviesController {
       );
     }
 
-    // Allow quality selection via query param, fallback to best (largest size)
     let selectedTorrent = movie.torrents[0];
     if (quality) {
       const found = movie.torrents.find((t: any) => t.resolution === quality);
       if (found) selectedTorrent = found;
     } else {
-      // Pick largest torrent if possible
       selectedTorrent = movie.torrents.reduce(
         (a: any, b: any) => (a.size > b.size ? a : b),
         movie.torrents[0]
@@ -266,7 +263,6 @@ export class MoviesController {
       );
     }
 
-    // Log download attempt
     console.log(
       `Starting download for imdbId=${imdbId}, quality=${
         quality || selectedTorrent.resolution
@@ -279,7 +275,6 @@ export class MoviesController {
         {}
       );
 
-      // Create or update movie record in database
       const movieRecord = await this.moviesService.createMovie({
         imdbId: (movie as any).imdb_id,
         title: movie.title,
@@ -432,7 +427,6 @@ export class MoviesController {
       throw new HttpException('Movie not found', HttpStatus.NOT_FOUND);
     }
 
-    // If transcoding, calculate actual progress based on segment files
     if (movie.status === 'transcoding' && movie.videoPath) {
       try {
         const fs = require('fs');
