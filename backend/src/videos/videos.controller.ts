@@ -1,74 +1,25 @@
 import {
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Post,
-  Res,
-  UploadedFile,
-  UseInterceptors,
+    Controller,
+    Delete,
+    Get,
+    Param,
+    Res,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
 import {
-  ApiBody,
-  ApiConsumes,
-  ApiOperation,
-  ApiParam,
-  ApiResponse,
-  ApiTags,
+    ApiOperation,
+    ApiParam,
+    ApiResponse,
+    ApiTags,
 } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { Public } from '../auth/decorators/public.decorator';
 import { VideoStatusResponseDto } from './dto/video-status-response.dto';
-import { VideoUploadResponseDto } from './dto/video-upload-response.dto';
 import { VideosService } from './videos.service';
 
 @ApiTags('Videos')
 @Controller('videos')
 export class VideosController {
   constructor(private readonly videosService: VideosService) {}
-
-  @Post('upload')
-  @ApiOperation({ summary: 'Upload a video file' })
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        file: {
-          type: 'string',
-          format: 'binary',
-        },
-      },
-    },
-  })
-  @ApiResponse({
-    status: 201,
-    description: 'Video uploaded successfully and queued for processing.',
-    type: VideoUploadResponseDto,
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Bad request - invalid file or missing file',
-  })
-  @UseInterceptors(
-    FileInterceptor('file', {
-      dest: '/app/videos', // Shared volume path
-    }),
-  )
-  uploadVideo(@UploadedFile() file: Express.Multer.File): VideoUploadResponseDto {
-    return this.videosService.handleUpload(file);
-  }
-
-  @Get()
-  @ApiOperation({ summary: 'List all uploaded videos' })
-  @ApiResponse({
-    status: 200,
-    description: 'Returns list of all videos with their processing status.',
-  })
-  async listVideos() {
-    return this.videosService.listVideos();
-  }
 
   @Get(':videoId/status')
   @ApiOperation({ summary: 'Get video processing status' })

@@ -9,7 +9,6 @@ import { CommentsModule } from './comments/comments.module';
 import { AppDataSource } from './data-source';
 import { SubtitlesModule } from './subtitles/subtitles.module';
 import { UsersModule } from './users/users.module';
-import { VideosModule } from './videos/videos.module';
 import { WatchHistoryModule } from './watch-history/watch-history.module';
 
 @Module({
@@ -18,7 +17,6 @@ import { WatchHistoryModule } from './watch-history/watch-history.module';
     ScheduleModule.forRoot(),
     AuthModule,
     UsersModule,
-    VideosModule,
     CommentsModule,
     WatchHistoryModule,
     SubtitlesModule,

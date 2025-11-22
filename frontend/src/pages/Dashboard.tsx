@@ -1,29 +1,14 @@
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { VideoList } from '@/components/VideoList';
-import { VideoUpload } from '@/components/VideoUpload';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { Calendar, LogOut, Mail, User } from 'lucide-react';
-import { useState } from 'react';
 
 export const Dashboard = () => {
   const { user, logout } = useAuth();
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   if (!user) {
     return null;
   }
-
-  const handleVideoUploaded = (videoId: string) => {
-    // Track uploaded videos in localStorage
-    const uploadedVideos = JSON.parse(localStorage.getItem('uploadedVideos') || '[]');
-    if (!uploadedVideos.includes(videoId)) {
-      uploadedVideos.push(videoId);
-      localStorage.setItem('uploadedVideos', JSON.stringify(uploadedVideos));
-    }
-    // Trigger refresh of video list
-    setRefreshTrigger((prev) => prev + 1);
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10 p-4">
@@ -79,21 +64,6 @@ export const Dashboard = () => {
             </CardContent>
           </Card>
         </div>
-
-        <Card className="mt-8">
-          <CardHeader>
-            <CardTitle>🎬 Video Test Setup (Legacy)</CardTitle>
-            <CardDescription>
-              Upload and test video transcoding and streaming functionality
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-6 lg:grid-cols-2">
-              <VideoUpload onVideoUploaded={handleVideoUploaded} />
-              <VideoList refreshTrigger={refreshTrigger} />
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

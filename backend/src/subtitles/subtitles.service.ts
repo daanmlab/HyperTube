@@ -246,11 +246,13 @@ export class SubtitlesService {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       this.logger.error(`OpenSubtitles API error for ${language}: ${errorMessage}`);
-      
+
       if (axios.isAxiosError(error) && error.response) {
-        this.logger.error(`Status: ${error.response.status}, Data: ${JSON.stringify(error.response.data)}`);
+        this.logger.error(
+          `Status: ${error.response.status}, Data: ${JSON.stringify(error.response.data)}`,
+        );
       }
-      
+
       return null;
     }
   }
