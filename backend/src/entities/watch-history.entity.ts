@@ -8,7 +8,6 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Movie } from './movie.entity';
 import { User } from './user.entity';
 
 @Entity('watch_history')
@@ -25,12 +24,8 @@ export class WatchHistory {
   @Column()
   userId: string;
 
-  @ManyToOne(() => Movie, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'imdbId', referencedColumnName: 'imdbId' })
-  @Index()
-  movie: Movie;
-
   @Column()
+  @Index()
   imdbId: string;
 
   @Column({ type: 'int', default: 0 })

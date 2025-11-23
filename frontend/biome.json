@@ -38,5 +38,14 @@
       "arrowParentheses": "always",
       "jsxQuoteStyle": "double"
     }
+  },
+  "css": {
+    "parser": {
+      "cssModules": false,
+      "tailwindDirectives": true
+    },
+    "linter": {
+      "enabled": true
+    }
   }
 }

@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Movie } from '../entities/movie.entity';
 import { User } from '../entities/user.entity';
 import { WatchHistory } from '../entities/watch-history.entity';
 import { UpdateWatchProgressDto, WatchHistoryResponseDto } from './dto';
@@ -11,30 +10,18 @@ export class WatchHistoryService {
   constructor(
     @InjectRepository(WatchHistory)
     private watchHistoryRepository: Repository<WatchHistory>,
-    @InjectRepository(Movie)
-    private moviesRepository: Repository<Movie>,
   ) {}
 
   async updateProgress(
     updateWatchProgressDto: UpdateWatchProgressDto,
     user: User,
   ): Promise<WatchHistoryResponseDto> {
-    // Verify movie exists
-    const movie = await this.moviesRepository.findOne({
-      where: { imdbId: updateWatchProgressDto.imdbId },
-    });
-
-    if (!movie) {
-      throw new NotFoundException(`Movie with IMDB ID ${updateWatchProgressDto.imdbId} not found`);
-    }
-
     // Find existing watch history or create new
     let watchHistory = await this.watchHistoryRepository.findOne({
       where: {
         userId: user.id,
         imdbId: updateWatchProgressDto.imdbId,
       },
-      relations: ['movie'],
     });
 
     if (!watchHistory) {
@@ -44,7 +31,6 @@ export class WatchHistoryService {
         watchedSeconds: updateWatchProgressDto.watchedSeconds,
         totalSeconds: updateWatchProgressDto.totalSeconds || undefined,
         lastWatchedAt: new Date(),
-        movie: movie,
       });
     } else {
       watchHistory.watchedSeconds = updateWatchProgressDto.watchedSeconds;
@@ -110,7 +96,7 @@ export class WatchHistoryService {
     return {
       id: watchHistory.id,
       imdbId: watchHistory.imdbId,
-      movieTitle: watchHistory.movie?.title || 'Unknown',
+      movieTitle: watchHistory.imdbId, // No movie relation anymore, just use imdbId
       watchedSeconds: watchHistory.watchedSeconds,
       totalSeconds: watchHistory.totalSeconds || 0,
       completed: watchHistory.completed,

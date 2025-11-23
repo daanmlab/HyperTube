@@ -91,10 +91,7 @@ export class SubtitlesController {
     status: 200,
     description: 'Subtitles searched and downloaded',
   })
-  async searchSubtitles(
-    @Param('imdbId') imdbId: string,
-    @Body() body?: { languages?: string[] },
-  ) {
+  async searchSubtitles(@Param('imdbId') imdbId: string, @Body() body?: { languages?: string[] }) {
     const languages = body?.languages || ['en'];
     const subtitles = await this.subtitlesService.searchAndDownload(imdbId, languages);
 

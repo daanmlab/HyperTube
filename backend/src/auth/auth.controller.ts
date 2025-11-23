@@ -123,7 +123,6 @@ export class AuthController {
     const user = req.user;
     const authResponse = await this.authService.loginWithFortyTwo(user);
 
-    // Redirect to frontend with the token
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const redirectUrl = `${frontendUrl}/auth/callback?token=${authResponse.access_token}`;
 
@@ -155,7 +154,6 @@ export class AuthController {
     const user = req.user;
     const authResponse = await this.authService.loginWithGoogle(user);
 
-    // Redirect to frontend with the token
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const redirectUrl = `${frontendUrl}/auth/callback?token=${authResponse.access_token}`;
 

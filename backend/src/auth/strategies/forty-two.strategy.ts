@@ -19,7 +19,6 @@ export class FortyTwoStrategy extends PassportStrategy(Strategy, '42') {
 
   async validate(accessToken: string, refreshToken: string, profile: any, done: any): Promise<any> {
     try {
-      // Get user info from 42 API
       const response = await axios.get('https://api.intra.42.fr/v2/me', {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -28,7 +27,6 @@ export class FortyTwoStrategy extends PassportStrategy(Strategy, '42') {
 
       const fortyTwoUser = response.data;
 
-      // Find or create user in our database
       const user = await this.authService.findOrCreateFortyTwoUser({
         fortyTwoId: fortyTwoUser.id.toString(),
         email: fortyTwoUser.email,

@@ -36,9 +36,9 @@ export class AddCommentsWatchHistorySubtitles1761932881945 implements MigrationI
     await queryRunner.query(
       `CREATE UNIQUE INDEX "IDX_74f170af675c59b0ea5c5188be" ON "subtitles" ("imdbId", "language") `,
     );
-    
+
     const moviesTableExists = await queryRunner.hasTable('movies');
-    
+
     if (moviesTableExists) {
       await queryRunner.query(
         `ALTER TYPE "public"."movies_status_enum" RENAME TO "movies_status_enum_old"`,
@@ -52,7 +52,7 @@ export class AddCommentsWatchHistorySubtitles1761932881945 implements MigrationI
       );
       await queryRunner.query(`ALTER TABLE "movies" ALTER COLUMN "status" SET DEFAULT 'requested'`);
       await queryRunner.query(`DROP TYPE "public"."movies_status_enum_old"`);
-      
+
       await queryRunner.query(
         `ALTER TYPE "public"."movies_selectedquality_enum" RENAME TO "movies_selectedquality_enum_old"`,
       );
@@ -104,10 +104,10 @@ export class AddCommentsWatchHistorySubtitles1761932881945 implements MigrationI
     await queryRunner.query(
       `ALTER TABLE "comments" DROP CONSTRAINT "FK_7e8d7c49f218ebb14314fdb3749"`,
     );
-    
+
     // Check if movies table exists
     const moviesTableExists = await queryRunner.hasTable('movies');
-    
+
     if (moviesTableExists) {
       // Revert enum changes
       await queryRunner.query(
@@ -120,7 +120,7 @@ export class AddCommentsWatchHistorySubtitles1761932881945 implements MigrationI
       await queryRunner.query(
         `ALTER TYPE "public"."movies_selectedquality_enum_old" RENAME TO "movies_selectedquality_enum"`,
       );
-      
+
       await queryRunner.query(
         `CREATE TYPE "public"."movies_status_enum_old" AS ENUM('requested', 'downloading', 'transcoding', 'ready', 'error')`,
       );
